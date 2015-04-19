@@ -11,18 +11,18 @@
 
 <context:component-scan base-package="spring.core.ioc.annotation"></context:component-scan>
 
-    <!-- resource-pattern is used for filtering certain classes-->
-    <!--
-    <context:component-scan base-package="spring.core.ioc.annotation"
-                            resource-pattern="repository/*.class">
-    </context:component-scan>
-    -->
+<!-- resource-pattern is used for filtering certain classes-->
+<!--
+<context:component-scan base-package="spring.core.ioc.annotation"
+                        resource-pattern="repository/*.class">
+</context:component-scan>
+-->
 
-    <!--
-    <context:component-scan base-package="spring.core.ioc.annotation">
-    <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Repository"></context:exclude-filter>
-    </context:component-scan>
-    -->
+<!--
+<context:component-scan base-package="spring.core.ioc.annotation">
+<context:exclude-filter type="annotation" expression="org.springframework.stereotype.Repository"></context:exclude-filter>
+</context:component-scan>
+-->
 
 <!--
     <context:component-scan base-package="spring.core.ioc.annotation" use-default-filters="false">

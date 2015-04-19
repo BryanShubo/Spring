@@ -129,7 +129,7 @@
     </bean>
 
 
-    <context:property-placeholder location="db.properties"></context:property-placeholder>
+    <context:property-placeholder location="ioc_db.properties"></context:property-placeholder>
     <bean id="source2" class="com.mchange.v2.c3p0.ComboPooledDataSource">
         <property name="user" value="${user}"></property>
         <property name="password" value="${password}"></property>

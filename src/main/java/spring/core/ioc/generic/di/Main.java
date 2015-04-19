@@ -8,7 +8,7 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
 public class Main {
 
     public static void main(String[] args){
-        ApplicationContext ctx = new ClassPathXmlApplicationContext("generic-di.xml");
+        ApplicationContext ctx = new ClassPathXmlApplicationContext("ioc_generic-di.xml");
 
         UserService us = (UserService) ctx.getBean("userService");
         us.add();

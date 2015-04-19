@@ -1,7 +1,6 @@
 package spring.core.ioc.beans;
 
 import com.mchange.v2.c3p0.ComboPooledDataSource;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 public class Main {
@@ -15,8 +14,8 @@ public class Main {
 
         //1. Create Spring IOC container object
         // ApplicationContext is an interface, ClassPathXmlApplicationContext is an implementation class
-        //ApplicationContext ctx = new ClassPathXmlApplicationContext("beans.xml");
-        ClassPathXmlApplicationContext ctx = new ClassPathXmlApplicationContext("beans.xml");
+        //ApplicationContext ctx = new ClassPathXmlApplicationContext("ioc_beans.xml");
+        ClassPathXmlApplicationContext ctx = new ClassPathXmlApplicationContext("ioc_beans.xml");
 
         //2. Get bean instance from IOC container
         // getBean(className.class), there must be only one bean in this case.
@@ -81,7 +80,7 @@ public class Main {
         ComboPooledDataSource source = (ComboPooledDataSource) ctx.getBean("source");
         System.out.println(source.getUser() + " : " + source.getPassword() + " : " + source.getJdbcUrl() + " : " + source.getDriverClass());
 
-        //14. Testing db.properties
+        //14. Testing ioc_db.properties
         ComboPooledDataSource source2 = (ComboPooledDataSource) ctx.getBean("source2");
         System.out.println(source2.getUser() + " : " + source2.getPassword() + " : " + source2.getJdbcUrl() + " : " + source2.getDriverClass());
 

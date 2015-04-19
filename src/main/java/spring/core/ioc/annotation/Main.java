@@ -13,7 +13,7 @@ import spring.core.ioc.annotation.service.UserService;
 public class Main {
 
     public static void main(String[] args){
-        ApplicationContext ctx = new ClassPathXmlApplicationContext("annotation.xml");
+        ApplicationContext ctx = new ClassPathXmlApplicationContext("ioc_annotation.xml");
 
         TestObject to = (TestObject) ctx.getBean("testObject");
         System.out.println(to);
