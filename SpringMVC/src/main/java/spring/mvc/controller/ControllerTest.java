@@ -312,4 +312,15 @@ public class ControllerTest {
 
         return SUCCESS;
     }
+
+    @RequestMapping("/testView")
+    public String testView() {
+        return "helloView";
+    }
+
+
+    @RequestMapping("/testRedirect")
+    public String testRedirect() {
+        return "redirect:/index";
+    }
 }
