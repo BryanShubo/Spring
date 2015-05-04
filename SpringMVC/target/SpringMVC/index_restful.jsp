@@ -15,5 +15,9 @@
 
 <br/><br/>
 <a href="/emps"> List all employees</a>
+
+<br/><br/>
+
+<a href="/index"> Go to index</a>
 </body>
 </html>

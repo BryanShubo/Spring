@@ -6,11 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.Errors;
 import org.springframework.validation.FieldError;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.*;
 import spring.restful.crud.dao.DepartmentDao;
 import spring.restful.crud.dao.EmployeeDao;
 import spring.restful.crud.entities.Employee;
@@ -86,9 +83,9 @@ public class EmployeeHandler {
 		return "list";
 	}
 	
-//	@InitBinder
-//	public void initBinder(WebDataBinder binder){
-//		binder.setDisallowedFields("lastName");
-//	}
+/*	@InitBinder
+	public void initBinder(WebDataBinder binder){
+		binder.setDisallowedFields("lastName");
+	}*/
 	
 }
