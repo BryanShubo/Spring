@@ -118,4 +118,18 @@
         返回来呢 ? 反之则不行. Spring IOC 容器中的 bean 却不能来引用 SpringMVC IOC 容器中的 bean!
     -->
 
+
+    <!--
+		SpringMVC 的 IOC 容器中的 bean 可以来引用 Spring IOC 容器中的 bean.
+		返回来呢 ? 反之则不行. Spring IOC 容器中的 bean 却不能来引用 SpringMVC IOC 容器中的 bean!
+	-->
+    <!--
+    <context:component-scan base-package="com.atguigu.springmvc" use-default-filters="false">
+        <context:include-filter type="annotation"
+                                expression="org.springframework.stereotype.Controller"/>
+        <context:include-filter type="annotation"
+                                expression="org.springframework.web.bind.annotation.ControllerAdvice"/>
+    </context:component-scan>
+
+-->
 </beans>
