@@ -10,7 +10,7 @@ import spring.core.ioc.annotation.service.UserService;
  */
 @Controller
 public class UserController {
-    @Autowired(required = false) // This bean does not have to be defined in config file.
+  /*  @Autowired(required = false) // This bean does not have to be defined in config file.
     private TestObject testObject;
 
     @Autowired // This bean must be defined in config file
@@ -19,5 +19,5 @@ public class UserController {
     public void execute() {
         System.out.println("UserController execute method---");
         userService.add();
-    }
+    }*/
 }
