@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/SpringSecurity.iml" filepath="$PROJECT_DIR$/SpringSecurity.iml" />
+      <module fileurl="file://$PROJECT_DIR$/login-db/login-db.iml" filepath="$PROJECT_DIR$/login-db/login-db.iml" />
+      <module fileurl="file://$PROJECT_DIR$/login-xml/login-xml.iml" filepath="$PROJECT_DIR$/login-xml/login-xml.iml" />
+    </modules>
+  </component>
+</project>
+
