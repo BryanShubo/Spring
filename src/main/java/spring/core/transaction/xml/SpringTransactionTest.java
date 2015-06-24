@@ -2,7 +2,7 @@ package spring.core.transaction.xml;
 
 import java.util.Arrays;
 
-import org.junit.Test;
+import org.junit.*;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import spring.core.transaction.xml.service.BookShopService;
