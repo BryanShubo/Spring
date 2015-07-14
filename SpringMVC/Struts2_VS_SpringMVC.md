@@ -1,4 +1,4 @@
-What are the basic differences between both of these frameworks? 
+## Struts 2 VS SpringMVC
 
 Well, Apache Struts 2 is an elegant and extensible framework that is used for creating enterprise-level Java web applications. It is designed to streamline the development cycle, starting from building to deployment and maintenance of the application. In Struts, the object that is taking care of a request and routes it for further processing is known as “Action”.
 
@@ -13,7 +13,8 @@ So, Spring Web MVC framework is far efficient to handle the requests than Struts
 
 If we talk about the features, Struts 2 and Spring MVC framework caters different level of business requirements.
 Let’s take a look at features offered by both of these frameworks.
-Struts 2 features
+
+###Struts 2 features
 
 Configurable MVC components, which are stored in struts.xml file. If you want to change anything, you can easily do it in the xml file.
 POJO based actions. Struts 2 action class is Plain Old Java Object, which prevents developers to implement any interface or inherit any class.
@@ -30,7 +31,7 @@ On the other hand, Spring MVC framework brings totally different set of features
 
 
 
-Spring MVC features
+###Spring MVC features
 
 Neat and clear separation of roles. Whether it is controller, command object, form object or anything else, it can be easily fulfilled with the help of a specialized object.
 Leverage from the adaptability, non-intrusiveness and flexibility with the help of controller method signature.
@@ -46,7 +47,7 @@ Both of these frameworks have their own set of pros and cons associated with it.
 
 
 
-Struts framework brings a whole host of benefits including:
+###Struts framework brings a whole host of benefits including:
 
 Simplified design
 Ease of using plug-in
