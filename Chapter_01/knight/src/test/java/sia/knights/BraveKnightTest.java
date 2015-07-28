@@ -13,7 +13,7 @@ public class BraveKnightTest {
     Quest mockQuest = mock(Quest.class);
     BraveKnight knight = new BraveKnight(mockQuest);
     knight.embarkOnQuest();
-    verify(mockQuest, times(1)).embark();
+    verify(mockQuest, times(1)).embark();//Assert that the quest’s embark() method is called when the knight’s embarkOnQuest() method is called.
   }
 
 }

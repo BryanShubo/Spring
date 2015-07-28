@@ -15,18 +15,24 @@
     <constructor-arg value="#{T(System).out}" />
   </bean>
 
+
+    <!-- Declare Minstrel Bean-->
   <bean id="minstrel" class="sia.knights.Minstrel">
     <constructor-arg value="#{T(System).out}" />
   </bean>
 
   <aop:config>
     <aop:aspect ref="minstrel">
+
+        <!-- Define pointcut-->
       <aop:pointcut id="embark"
           expression="execution(* *.embarkOnQuest(..))"/>
-        
+
+        <!-- Declare before advice-->
       <aop:before pointcut-ref="embark" 
           method="singBeforeQuest"/>
 
+        <!-- Declare after advice-->
       <aop:after pointcut-ref="embark" 
           method="singAfterQuest"/>
     </aop:aspect>

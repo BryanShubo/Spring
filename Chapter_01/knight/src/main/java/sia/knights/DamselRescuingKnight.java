@@ -1,5 +1,7 @@
 package sia.knights;
 
+
+
 public class DamselRescuingKnight implements Knight {
 
   private RescueDamselQuest quest;
