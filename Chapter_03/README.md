@@ -30,12 +30,21 @@ In the case of a shopping cart bean, session scope makes the most sense, because
 
 ```java
 
-@Component@Scope(value=WebApplicationContext.SCOPE_SESSION,
+@Component
+@Scope(value=WebApplicationContext.SCOPE_SESSION,
                  proxyMode=ScopedProxyMode.INTERFACES)
 public ShoppingCart cart() { ... }
 ```
 
+```java
+@Component
+public class StoreService {
+@Autowiredpublic void setShoppingCart(ShoppingCart shoppingCart) {
+this.shoppingCart = shoppingCart;
+}...
+}
 
+```
 
 
 
