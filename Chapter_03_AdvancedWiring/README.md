@@ -82,3 +82,88 @@ public class ExpressiveConfig {
     }
 }
 ```
+
+
+Chapter_04: AOP
+In software development, functions that span multiple points of an application are
+called cross-cutting concerns.
+
+Cross-cutting concerns: Logging, security, and transaction management
+
+DI: DI helps you decouple application objects from each other.
+AOP helps you decouple cross-cutting concerns from the objects they affect.
+
+Advice: the job of an aspect is called advice. Advice defines both the what and the when of an aspect.
+Spring can work with five kinds of advice: Before, After, After-returning, After-throwing, and Around.
+
+@After The advice method is called after the advised method returns or throws an exception.
+@AfterReturning The advice method is called after the advised method returns.
+@AfterThrowing The advice method is called after the advised method throws an exception.
+@Around The advice method wraps the advised method.
+@Before The advice method is called before the advised method is called.
+
+Join Points: A join point is a point in
+             the execution of the application where an aspect can be plugged in.
+
+Pointcuts: If advice defines the what and when of aspects, then pointcuts define the where. A
+           pointcut definition matches one or more join points at which advice should be woven.
+
+           An aspect does not  necessarily advise all join points in an application. Pointcuts help narrow
+           down the join points advised by an aspect.
+           
+     
+Aspect: An aspect is the merger of advice and pointcuts. what it does and where and when it does it.
+                                                        
+
+Weaving is the process of applying aspects to a target object to create a new proxied
+object.
+1) Compile time
+2) Class load time
+3) Runtime
+  
+                                                         
+Spring’s support for AOP comes in four styles:
+ Classic Spring proxy-based AOP
+ Pure-POJO aspects
+ @AspectJ annotation-driven aspects
+ Injected AspectJ aspects (available in all versions of Spring)
+
+SPRING ADVISES OBJECTS AT RUNTIME
+
+SPRING ONLY SUPPORTS METHOD JOIN POINTS
+
+4.3.4 Annotating introductions
+      Some languages, such as Ruby and Groovy, have the notion of open classes. They
+      make it possible to add new methods to an object or class without directly changing
+      the definition of those objects or classes. Unfortunately, Java isn’t that dynamic. Once
+      a class has been compiled, there’s little you can do to append new functionality to it.
+      But if you think about it, isn’t that what you’ve been doing in this chapter with
+      aspects? Sure, you haven’t added any new methods to objects, but you’re adding new
+      functionality around the methods that the objects already have. If an aspect can wrap
+      existing methods with additional functionality, why not add new methods to the
+      object? In fact, using an AOP concept known as introduction, aspects can attach new
+      methods to Spring beans.
+      
+      
+      
+      9.2.5 Introductions
+      
+      Introductions (known as inter-type declarations in AspectJ) enable an aspect to declare that advised objects implement a given interface, and to provide an implementation of that interface on behalf of those objects.
+      
+      An introduction is made using the @DeclareParents annotation. This annotation is used to declare that matching types have a new parent (hence the name). For example, given an interface UsageTracked, and an implementation of that interface DefaultUsageTracked, the following aspect declares that all implementors of service interfaces also implement the UsageTracked interface. (In order to expose statistics via JMX for example.)
+      
+      @Aspect
+      public class UsageTracking {
+      
+          @DeclareParents(value="com.xzy.myapp.service.*+", defaultImpl=DefaultUsageTracked.class)
+          public static UsageTracked mixin;
+      
+          @Before("com.xyz.myapp.SystemArchitecture.businessService() && this(usageTracked)")
+          public void recordUsage(UsageTracked usageTracked) {
+              usageTracked.incrementUseCount();
+          }
+      
+      }
+      The interface to be implemented is determined by the type of the annotated field. The value attribute of the @DeclareParents annotation is an AspectJ type pattern :- any bean of a matching type will implement the UsageTracked interface. Note that in the before advice of the above example, service beans can be directly used as implementations of the UsageTracked interface. If accessing a bean programmatically you would write the following:
+      
+      UsageTracked usageTracked = (UsageTracked) context.getBean("myService");
