@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * Copyright 2012 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+-->
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:int="http://www.springframework.org/schema/integration"
+    xmlns:int-twitter="http://www.springframework.org/schema/integration/twitter"
+    xmlns:context="http://www.springframework.org/schema/context"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/integration
+        http://www.springframework.org/schema/integration/spring-integration.xsd
+        http://www.springframework.org/schema/integration/twitter
+        http://www.springframework.org/schema/integration/twitter/spring-integration-twitter.xsd">
+
+	<context:property-placeholder location="classpath:siia/twitter/oauth.properties"/>
+
+	<int-twitter:inbound-channel-adapter id="timelineReadingAdapter"
+			twitter-template="twitterTemplate" channel="inboundTweets">
+		<int:poller fixed-rate="10" time-unit="SECONDS" max-messages-per-poll="25" />
+	</int-twitter:inbound-channel-adapter>
+
+	<int:logging-channel-adapter id="inboundTweets" expression="payload.fromUser +
+			': ' + payload.text + ' [' + payload.createdAt + ']'"/>
+
+	<bean id="twitterTemplate"
+			class="org.springframework.social.twitter.api.impl.TwitterTemplate">
+		<constructor-arg value="${twitter.oauth.consumerKey}" />
+		<constructor-arg value="${twitter.oauth.consumerSecret}" />
+		<constructor-arg value="${twitter.oauth.accessToken}" />
+		<constructor-arg value="${twitter.oauth.accessTokenSecret}" />
+	</bean>
+
+</beans>

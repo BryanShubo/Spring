@@ -1,10 +1,14 @@
+*/target/
 target
-.metadata
-.settings
+activemq-data
+bin
 .classpath
 .project
-*.class
-# Package Files #
-*.jar
-*.war
-*.ear
+.settings
+.springBeans
+.pydevproject
+*.iml
+.DS_Store
+**/.DS_Store
+MANIFEST.MF
+./idea/
