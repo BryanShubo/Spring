@@ -20,7 +20,7 @@ public class ValidationAspect {
     /*
     * Define an empty method for pointcut expression.
     * */
-    @Pointcut("execution(* spring.core.aop.annotation.Calculator.*(..))")
+    @Pointcut("execution(* spring.core.aop.annotation.CalculatorAOP.*(..))")
     public void declareJointPointExpression(){}
 
     @Before("declareJointPointExpression()")

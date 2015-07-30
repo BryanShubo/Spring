@@ -6,13 +6,13 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
 /**
  * Created by Shubo on 4/12/2015.
  */
-public class Main {
+public class App_aop_annotation {
 
     public static void main(String[] args){
 
         ApplicationContext ctx = new ClassPathXmlApplicationContext("aop_impl_annotation.xml");
 
-        Calculator calculator = ctx.getBean(Calculator.class);
+        CalculatorAOP calculator = ctx.getBean(CalculatorAOP.class);
 
         int add = calculator.add(3,7);
         System.out.println("add " + add);
