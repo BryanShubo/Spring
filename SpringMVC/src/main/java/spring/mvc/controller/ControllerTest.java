@@ -3,6 +3,7 @@ package spring.mvc.controller;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.view.RedirectView;
 import spring.mvc.entities.User;
 
 import javax.servlet.http.HttpServletRequest;
@@ -323,4 +324,26 @@ public class ControllerTest {
     public String testRedirect() {
         return "redirect:/index";
     }
-}
+
+
+
+    /*
+    * Testing redirect
+    * */
+    @RequestMapping("/to-be-redirect")
+    public RedirectView localRedirect() {
+        RedirectView redirectView = new RedirectView();
+        redirectView.setUrl("http://www.yahoo.com");
+        return redirectView;
+    }
+
+    @RequestMapping("/to-be-redirect")
+    public ModelAndView localRedirect2(){
+        return new ModelAndView("redirect:" + "www.yahoo.com");
+    }
+
+    @RequestMapping("/to-be-redirect")
+    public void localRedirect3(HttpServletResponse httpServletResponse) {
+        httpServletResponse.setHeader("Location", "www.yahoo.com");
+    }
+ }
