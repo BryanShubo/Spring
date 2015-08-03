@@ -167,3 +167,24 @@ SPRING ONLY SUPPORTS METHOD JOIN POINTS
       The interface to be implemented is determined by the type of the annotated field. The value attribute of the @DeclareParents annotation is an AspectJ type pattern :- any bean of a matching type will implement the UsageTracked interface. Note that in the before advice of the above example, service beans can be directly used as implementations of the UsageTracked interface. If accessing a bean programmatically you would write the following:
       
       UsageTracked usageTracked = (UsageTracked) context.getBean("myService");
+      
+      
+      
+      4.4 Declaring aspects in XML
+      ```
+      AOP configuration element Purpose
+      <aop:advisor> Defines an AOP advisor.
+      <aop:after> Defines an AOP after advice (regardless of whether the advised
+      method returns successfully).
+      <aop:after-returning> Defines an AOP after-returning advice.
+      <aop:after-throwing> Defines an AOP after-throwing advice.
+      <aop:around> Defines an AOP around advice.
+      <aop:aspect> Defines an aspect.
+      <aop:aspectj-autoproxy> Enables annotation-driven aspects using @AspectJ.
+      <aop:before> Defines an AOP before advice.
+      <aop:config> The top-level AOP element. Most \<aop:\*\> elements must be
+      contained within \<aop:config\>.
+      <aop:declare-parents> Introduces additional interfaces to advised objects that are transparently implemented.
+      <aop:pointcut> Defines a pointcut
+      
+      ```

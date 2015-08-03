@@ -20,7 +20,7 @@ import spittr.web.SpittleController;
 public class SpittleControllerTest {
 
   @Test
-  public void houldShowRecentSpittles() throws Exception {
+  public void shouldShowRecentSpittles() throws Exception {
     List<Spittle> expectedSpittles = createSpittleList(20);
     SpittleRepository mockRepository = mock(SpittleRepository.class);
     when(mockRepository.findSpittles(Long.MAX_VALUE, 20))
@@ -56,7 +56,10 @@ public class SpittleControllerTest {
       .andExpect(model().attribute("spittleList", 
                  hasItems(expectedSpittles.toArray())));
   }
-  
+
+    /*
+    * Testing a request for a Spittle with ID specified in a path variable
+    * */
   @Test
   public void testSpittle() throws Exception {
     Spittle expectedSpittle = new Spittle("Hello", new Date());

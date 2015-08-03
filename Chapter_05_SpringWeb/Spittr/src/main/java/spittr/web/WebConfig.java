@@ -10,6 +10,10 @@ import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
+
+/*
+* A minimal yet useful configuration for Spring MVC
+* */
 @Configuration
 @EnableWebMvc
 @ComponentScan("spittr.web")
