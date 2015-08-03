@@ -19,6 +19,15 @@ import spittr.web.SpittleController;
 
 public class SpittleControllerTest {
 
+
+    /*
+    * setSingleView().build(). This is so the  mock  framework  won’t try to resolve the  view name
+coming  from the controller on its own. In many cases, this is unnecessary. But for this controller
+method, the  view name  will be  similar  to  the  request’s  path;  left  to  its default  view
+resolution, MockMvc will fail because  the  view path  will be confused with the controller’s path.
+ The actual path given when constructing the InternalResourceView is unimportant in  this  test,
+but  you set it to  be  consistent with how you’ve configured InternalResourceViewResolver.
+    * */
   @Test
   public void shouldShowRecentSpittles() throws Exception {
     List<Spittle> expectedSpittles = createSpittleList(20);
