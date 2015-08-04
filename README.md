@@ -530,8 +530,10 @@ b. Configure it via XML file
     @Size The value of the annotated element must be either a String, a collection, or
     an array whose length fits within the given range.
     
-6.1
-
+    
+    
+### Chapter 6: Rendering web views
+6.1 View Resolution
 At most, the controller methods and view implementations should agree on the contents of the model;
 apart from that, they should keep an arms-length distance from each other.
 
@@ -554,5 +556,257 @@ HttpServletResponse response) throws Exception;
 The View interface’s job is to take the model, as well as the servlet request and
 response objects, and render output into the response.
 ```       
-            
-            
+
+           
+```
+View resolver Description
+BeanNameViewResolver: Resolves views as beans in the Spring application context
+whose ID is the same as the view name.
+
+ContentNegotiatingViewResolver: Resolves views by considering the content type desired by
+the client and delegating to another view resolver that can
+produce that type.
+
+FreeMarkerViewResolver:  Resolves views as FreeMarker templates.
+
+**InternalResourceViewResolver**(JSPs): Resolves views as resources internal to the web application
+
+JasperReportsViewResolver:  Resolves views as JasperReports definitions.
+
+ResourceBundleViewResolver:  Resolves views from a resource bundle (typically a properties
+file).
+
+**TilesViewResolver**(apache tile views):  Resolves views as Apache Tile definitions, where the tile
+ID is the same as the view name. Note that there are two
+different TilesViewResolver implementations, one
+each for Tiles 2.0 and Tiles 3.0.
+
+UrlBasedViewResolver:  Resolves views directly from the view name, where the
+view name matches the name of a physical view definition.
+
+VelocityLayoutViewResolver: Resolves views as Velocity layouts to compose pages from
+different Velocity templates.
+
+VelocityViewResolver: Resolves views as Velocity templates.
+
+XmlViewResolver: Resolves views as bean definitions from a specified XML
+file. Similar to BeanNameViewResolver.
+
+XsltViewResolver: Resolves views to be rendered as the result of an XSLT
+transformation.
+```
+
+          
+6.2 Creating JSP views
+Spring supports JSP views in two ways:
+* InternalResourceViewResolver can be used to resolve view names into JSP
+files. Moreover, if you’re using JavaServer Pages Standard Tag Library (JSTL)
+tags in your JSP pages, InternalResourceViewResolver can resolve view names
+into JSP files fronted by JstlView to expose JSTL locale and resource bundle
+variables to JSTL’s formatting and message tags.
+* Spring provides two JSP tag libraries, one for form-to-model binding and one
+providing general utility features.
+
+InternalResourceViewResolver
+resolves views by adding a prefix and a suffix to the
+view name.
+
+1) Resolving JSTL views
+@Bean
+public ViewResolver viewResolver() {
+InternalResourceViewResolver resolver =
+new InternalResourceViewResolver();
+resolver.setPrefix("/WEB-INF/views/");
+resolver.setSuffix(".jsp");
+resolver.setViewClass(
+org.springframework.web.servlet.view.JstlView.class);
+return resolver;
+}
+Again, you can accomplish the same thing with XML:
+<bean id="viewResolver"
+class="org.springframework.web.servlet.view.
+InternalResourceViewResolver"
+p:prefix="/WEB-INF/views/"
+p:suffix=".jsp"
+p:viewClass="org.springframework.web.servlet.view.JstlView" />
+
+
+2) Spring offers two JSP tag libraries to
+   help define the view of your Spring MVC web views. One tag library renders HTML
+   form tags that are bound to a model attribute. The other has a hodgepodge of utility
+   tags that come in handy from time to time.
+   
+Spring’s form-binding tag library includes tags to bind model objects to and from rendered
+HTML forms.
+JSP tag Description
+<sf:checkbox> Renders an HTML <input> tag with type set to checkbox.
+<sf:checkboxes> Renders multiple HTML <input> tags with type set to checkbox.
+<sf:errors> Renders field errors in an HTML <span> tag.
+<sf:form> Renders an HTML <form> tag and exposed binding path to inner tags
+for data-binding.
+<sf:hidden> Renders an HTML <input> tag with type set to hidden.
+<sf:input> Renders an HTML <input> tag with type set to text.
+<sf:label> Renders an HTML <label> tag.
+<sf:option> Renders an HTML <option> tag. The selected attribute is set
+according to the bound value.
+<sf:options> Renders a list of HTML <option> tags corresponding to the bound
+collection, array, or map.
+<sf:password> Renders an HTML <input> tag with type set to password.
+<sf:radiobutton> Renders an HTML <input> tag with type set to radio.
+<sf:radiobuttons> Renders multiple HTML <input> tags with type set to radio.
+<sf:select> Renders an HTML <select> tag.
+<sf:textarea> Renders an HTML <textarea> tag.
+   
+   
+ Using Spring’s form-binding tags gives you a slight improvement over using standard
+ HTML tags—the form is prepopulated with the previously entered values after failed
+ validation
+   
+Spring’s other JSP tag library offers a handful of convenient utility tags in addition to some
+legacy data-binding tags.
+JSP tag Description
+<s:bind> Exports a bound property status to a page-scoped status property. Used
+along with <s:path> to obtain a bound property value.
+<s:escapeBody> HTML and/or JavaScript escapes the content in the body of the tag.
+<s:hasBindErrors> Conditionally renders content if a specified model object (in a request attribute)
+has bind errors.
+<s:htmlEscape> Sets the default HTML escape value for the current page.
+<s:message> Retrieves the message with the given code and either renders it (default) or
+assigns it to a page-, request-, session-, or application-scoped variable
+(when using the var and scope attributes).
+<s:nestedPath> Sets a nested path to be used by <s:bind>.
+<s:theme> Retrieves a theme message with the given code and either renders it
+(default) or assigns it to a page-, request-, session-, or application-scoped
+variable (when using the var and scope attributes).
+<s:transform> Transforms properties not contained in a command object using a command
+object’s property editors.
+<s:url> Creates context-relative URLs with support for URI template variables and
+HTML/XML/JavaScript escaping. Can either render the URL (default) or
+assign it to a page-, request-, session-, or application-scoped variable
+(when using the var and scope attributes).
+<s:eval> Evaluates Spring Expression Language (SpEL) expressions, rendering the
+result (default) or assigning it to a page-, request-, session-, or applicationscoped
+variable (when using the var and scope attributes).   
+   
+   
+   6.3 Apache Tiles Views
+   
+   
+   6.4 Thymeleaf
+   
+   
+   
+   ### Chapter 7 Advanced Spring MVC (upload file, handle exception)
+  7.1 Setup Spring MVC 
+   web.xml
+   ```xml
+   <?xml version="1.0" encoding="UTF-8"?>
+   <web-app version="2.5"
+   xmlns="http://java.sun.com/xml/ns/javaee"
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="http://java.sun.com/xml/ns/javaee
+   http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
+   <context-param>
+   <param-name>contextConfigLocation</param-name>
+   <param-value>/WEB-INF/spring/root-context.xml</param-value>
+   </context-param>
+   <listener>
+   <listener-class>
+   org.springframework.web.context.ContextLoaderListener
+   </listener-class>
+   </listener>
+   <servlet>
+   <servlet-name>appServlet</servlet-name>
+   <servlet-class>
+   org.springframework.web.servlet.DispatcherServlet
+   </servlet-class>
+   <load-on-startup>1</load-on-startup>
+   </servlet>
+   <servlet-mapping>
+   <servlet-name>appServlet</servlet-name>
+   <url-pattern>/</url-pattern>
+   </servlet-mapping>
+   </web-app>
+   ```
+   Servlet Filter is used for monitoring request and response from client to the servlet, or to modify the request and response, or to audit and log.
+   
+   Servlet Listener is used for listening to events in a web containers, such as when you create a session, or place an attribute in an session or if you 
+   passivate and activate in another container, to subscribe to these events you can configure listener in web.xml, for example HttpSessionListener
+   
+   One important difference is often overlooked: while listeners get triggered for an actual physical request, filters work with servlet container dispatches. 
+   For one listener invocation there may be multiple filters/servlet invocations.
+   
+   1) The contextConfigLocation context parameter specifies the location of the XML file that defines the root 
+      application context loaded by ContextLoaderListener.
+   2) DispatcherServlet loads its application context with beans defined in a file whose
+      name is based on the servlet name.
+      
+      
+ 7.2 Multipart form data (upload file)
+ 
+ 1) Configuring a multipart resolver
+ Two out-of-the-box implementations of MultipartResolver to choose from:
+ * StandardServletMultipartResolver (recommended)—Relies on Servlet 3.0 support for multipart requests (since Spring 3.1)
+ * CommonsMultipartResolver (for pre-Servlet 3.0)—Resolves multipart requests using Jakarta Commons FileUpload
+
+Generally speaking, StandardServletMultipartResolver should probably be your first choice of these two. It uses existing 
+support in your servlet container and does not require any additional project dependencies
+
+
+StandardServletMultipartResolver: 
+constructor accepts the following:
+  * Temporary file path where the file will be written during the upload
+  * The maximum size (in bytes) of any file uploaded. By default there is no limit.
+  * The maximum size (in bytes) of the entire multipart request, regardless of how
+  many parts or how big any of the parts are. By default there is no limit.
+  * The maximum size (in bytes) of a file that can be uploaded without being written
+  to the temporary location. The default is 0, meaning that all uploaded files
+  will be written to disk.
+  
+  ```xml
+  
+  <servlet>
+  <servlet-name>appServlet</servlet-name>
+  <servlet-class>
+  org.springframework.web.servlet.DispatcherServlet
+  </servlet-class>
+  <load-on-startup>1</load-on-startup>
+  <multipart-config>
+  <location>/tmp/spittr/uploads</location>
+  <max-file-size>2097152</max-file-size>
+  <max-request-size>4194304</max-request-size>
+  </multipart-config>
+  </servlet
+  ```
+  
+  CommonsMultipartResolver: 
+  Unlike StandardServletMultipartResolver, there’s no need to configure a temporary
+  file location with CommonsMultipartResolver.By default, the location is the servlet
+  container’s temporary directory. But you can specify  a different location by setting
+  the uploadTempDir property:
+  ```java
+  @Bean
+  public MultipartResolver multipartResolver() throws IOException {
+  CommonsMultipartResolver multipartResolver =
+  new CommonsMultipartResolver();
+  multipartResolver.setUploadTempDir(
+  new FileSystemResource("/tmp/spittr/uploads"));
+  multipartResolver.setMaxUploadSize(2097152);
+  multipartResolver.setMaxInMemorySize(0);
+  return multipartResolver;
+  }
+  ```
+  
+  2) handling multipart requests
+  in controller method:@RequestPart
+  ```java
+  
+  @RequestMapping(value="/register", method=POST)
+  public String processRegistration(
+  @RequestPart("profilePicture") byte[] profilePicture,
+  @Valid Spitter spitter,
+  Errors errors) {
+  ...
+  }
+  ```
+  
