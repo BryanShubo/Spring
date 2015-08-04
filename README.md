@@ -232,7 +232,8 @@ The interface to be implemented is determined by the type of the annotated field
             
             
 ### Chapter 5 Spring Web   
-5.1 Spring MVC work flow
+#####5.1 Spring MVC work flow
+```
 Spring moves requests between a dispatcher servlet, handler mappings, controllers, and view resolvers.
 
 1) A request with information goes to DispatcherServlet.
@@ -241,12 +242,14 @@ Spring moves requests between a dispatcher servlet, handler mappings, controller
 4) Controller sends the request along with the model and view name back to the DispatcherServlet.
 5) DispatcherServlet consults a view resolver to map the logical view name to a specific view implementation.
 6) The view will use the model data to render output that the response object is back to client.
+```
 
 5.2 Setting up Spring MVC
+```
 1) Configuring DispatcherServlet
 When DispatcherServlet starts up, it creates  a Spring application context  and starts
 loading  it with beans declared in the configuration files or classes that it’s given.
-
+```
 
 2) Enable Spring MVC
 a. Create  a class annotated with @EnableWebMvc
@@ -413,7 +416,7 @@ b. Configure it via XML file
 
 ```
 
-5.3 Annotations:
+#####5.3 Annotations:
 ```
 @Controller: (for class) declare the bean in the Spring application context. 
 @RequestMapping(name="/", method=GET): (for both class and method )
@@ -421,17 +424,17 @@ b. Configure it via XML file
 
 ```
 
-
-5.4 Spring MVC provides several ways that a client can pass data into a controller’s handler method. These include
+#####5.4 Spring MVC provides several ways that a client can pass data into a controller’s handler method. These include
+```
     1) Query parameters: /spittles?max=238900&count=50
-    public List<Spittle> spittles(
-          @RequestParam(value="max", defaultValue=MAX_LONG_AS_STRING) long max,
-          @RequestParam(value="count", defaultValue="20") int count)
+			    public List<Spittle> spittles(
+			          @RequestParam(value="max", defaultValue=MAX_LONG_AS_STRING) long max,
+			          @RequestParam(value="count", defaultValue="20") int count)
     2) Path variables: /spittles/12345
-    @RequestMapping(value="/{spittleId}", method=RequestMethod.GET)
-      public String spittle(
-          @PathVariable("spittleId") long spittleId, 
-          Model model)
+			@RequestMapping(value="/{spittleId}", method=RequestMethod.GET)
+			public String spittle(
+			  @PathVariable("spittleId") long spittleId, 
+			  Model model)
     3) Form parameters: 
     Note: When handling a POST request, it’s usually a good idea to send a redirect after the
           POST has completed processing so that a browser refresh won’t accidentally submit the
@@ -443,51 +446,48 @@ b. Configure it via XML file
           it. That is, it will be posted back to /spitters/register.
           That means you’ll need something back on the server to handle the HTTP POST
           request. Let’s add another method to SpitterController to handle form submission.
-    @RequestMapping(value="/register", method=POST)
-      public String processRegistration(
-          @Valid Spitter spitter, 
-          Errors errors) {
-        if (errors.hasErrors()) {
-          return "registerForm";
-        }        
-        spitterRepository.save(spitter);
-        return "redirect:/spitter/" + spitter.getUsername();
-      }
-    
-5.4.1 Validating forms
-    One way to handle validation, is to add code to the processRegistration() method to check for invalid values 
-    and send the user back to the registration form unless the data is valid.
-    
-    Two: using Java Validation API
-    Annotation Description
-    @AssertFalse The annotated element must be a Boolean type and be false.
-    @AssertTrue The annotated element must be a Boolean type and be true.
-    @DecimalMax The annotated element must be a number whose value is less than or equal to
-    a given BigDecimalString value.
-    @DecimalMin The annotated element must be a number whose value is greater than or
-    equal to a given BigDecimalString value.
-    @Digits The annotated element must be a number whose value has a specified number
-    of digits.
-    @Future The value of the annotated element must be a date in the future.
-    @Max The annotated element must be a number whose value is less than or equal to
-    a given value.
-    @Min The annotated element must be a number whose value is greater than or
-    equal to a given value.
-    @NotNull The value of the annotated element must not be null.
-    @Null The value of the annotated element must be null.
-    @Past The value of the annotated element must be a date in the past.
-    @Pattern The value of the annotated element must match a given regular expression.
-    @Size The value of the annotated element must be either a String, a collection, or
-    an array whose length fits within the given range.
-    
+          
+	    @RequestMapping(value="/register", method=POST)
+	      public String processRegistration(
+	          @Valid Spitter spitter, 
+	          Errors errors) {
+	        if (errors.hasErrors()) {
+	          return "registerForm";
+	        }        
+	        spitterRepository.save(spitter);
+	        return "redirect:/spitter/" + spitter.getUsername();
+	      }
+```    
+#####5. Validating forms
+```
+One way to handle validation, is to add code to the processRegistration() method to check for invalid values 
+and send the user back to the registration form unless the data is valid.
+
+Two: using Java Validation API
+Annotation Description
+@AssertFalse The annotated element must be a Boolean type and be false.
+@AssertTrue The annotated element must be a Boolean type and be true.
+@DecimalMax The annotated element must be a number whose value is less than or equal to a given BigDecimalString value.
+@DecimalMin The annotated element must be a number whose value is greater than or equal to a given BigDecimalString value.
+@Digits The annotated element must be a number whose value has a specified number of digits.
+@Future The value of the annotated element must be a date in the future.
+@Max The annotated element must be a number whose value is less than or equal to a given value.
+@Min The annotated element must be a number whose value is greater than or equal to a given value.
+@NotNull The value of the annotated element must not be null.
+@Null The value of the annotated element must be null.
+@Past The value of the annotated element must be a date in the past.
+@Pattern The value of the annotated element must match a given regular expression.
+@Size The value of the annotated element must be either a String, a collection, or an array whose length fits within the given range.
+```
     
     
 ### Chapter 6: Rendering web views
-6.1 View Resolution
+#####6.1 View Resolution
+```
 At most, the controller methods and view implementations should agree on the contents of the model;
 apart from that, they should keep an arms-length distance from each other.
-
-···java
+```
+```java
 public interface ViewResolver {
 View resolveViewName(String viewName, Locale locale)
 throws Exception;
@@ -507,15 +507,11 @@ The View interface’s job is to take the model, as well as the servlet request 
 response objects, and render output into the response.
 ```       
 
-           
+View resolver Description           
 ```
-View resolver Description
-BeanNameViewResolver: Resolves views as beans in the Spring application context
-whose ID is the same as the view name.
+BeanNameViewResolver: Resolves views as beans in the Spring application context whose ID is the same as the view name.
 
-ContentNegotiatingViewResolver: Resolves views by considering the content type desired by
-the client and delegating to another view resolver that can
-produce that type.
+ContentNegotiatingViewResolver: Resolves views by considering the content type desired by the client and delegating to another view resolver that can produce that type.
 
 FreeMarkerViewResolver:  Resolves views as FreeMarker templates.
 
@@ -526,41 +522,27 @@ JasperReportsViewResolver:  Resolves views as JasperReports definitions.
 ResourceBundleViewResolver:  Resolves views from a resource bundle (typically a properties
 file).
 
-**TilesViewResolver**(apache tile views):  Resolves views as Apache Tile definitions, where the tile
-ID is the same as the view name. Note that there are two
-different TilesViewResolver implementations, one
-each for Tiles 2.0 and Tiles 3.0.
+**TilesViewResolver**(apache tile views):  Resolves views as Apache Tile definitions, where the tile ID is the same as the view name. Note that there are two different TilesViewResolver implementations, one each for Tiles 2.0 and Tiles 3.0.
 
-UrlBasedViewResolver:  Resolves views directly from the view name, where the
-view name matches the name of a physical view definition.
+UrlBasedViewResolver:  Resolves views directly from the view name, where the view name matches the name of a physical view definition.
 
-VelocityLayoutViewResolver: Resolves views as Velocity layouts to compose pages from
-different Velocity templates.
+VelocityLayoutViewResolver: Resolves views as Velocity layouts to compose pages from different Velocity templates.
 
 VelocityViewResolver: Resolves views as Velocity templates.
 
-XmlViewResolver: Resolves views as bean definitions from a specified XML
-file. Similar to BeanNameViewResolver.
+XmlViewResolver: Resolves views as bean definitions from a specified XML file. Similar to BeanNameViewResolver.
 
-XsltViewResolver: Resolves views to be rendered as the result of an XSLT
-transformation.
+XsltViewResolver: Resolves views to be rendered as the result of an XSLT transformation.
 ```
 
-          
-6.2 Creating JSP views
+#####6.2 Creating JSP views
 Spring supports JSP views in two ways:
-* InternalResourceViewResolver can be used to resolve view names into JSP
-files. Moreover, if you’re using JavaServer Pages Standard Tag Library (JSTL)
-tags in your JSP pages, InternalResourceViewResolver can resolve view names
-into JSP files fronted by JstlView to expose JSTL locale and resource bundle
-variables to JSTL’s formatting and message tags.
-* Spring provides two JSP tag libraries, one for form-to-model binding and one
-providing general utility features.
+* InternalResourceViewResolver can be used to resolve view names into JSP files. Moreover, if you’re using JavaServer Pages Standard Tag Library (JSTL) tags in your JSP pages, InternalResourceViewResolver can resolve view names into JSP files fronted by JstlView to expose JSTL locale and resource bundle variables to JSTL’s formatting and message tags.
 
-InternalResourceViewResolver
-resolves views by adding a prefix and a suffix to the
-view name.
+* Spring provides two JSP tag libraries, one for form-to-model binding and one providing general utility features.
 
+InternalResourceViewResolver resolves views by adding a prefix and a suffix to the view name.
+```
 1) Resolving JSTL views
 @Bean
 public ViewResolver viewResolver() {
@@ -637,73 +619,74 @@ assign it to a page-, request-, session-, or application-scoped variable
 <s:eval> Evaluates Spring Expression Language (SpEL) expressions, rendering the
 result (default) or assigning it to a page-, request-, session-, or applicationscoped
 variable (when using the var and scope attributes).   
+```   
+   
+#####6.3 Apache Tiles Views
    
    
-   6.3 Apache Tiles Views
-   
-   
-   6.4 Thymeleaf
+#####6.4 Thymeleaf
    
    
    
-   ### Chapter 7 Advanced Spring MVC (upload file, handle exception)
-  7.1 Setup Spring MVC 
-   web.xml
-   ```xml
-   <?xml version="1.0" encoding="UTF-8"?>
-   <web-app version="2.5"
-   xmlns="http://java.sun.com/xml/ns/javaee"
-   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-   xsi:schemaLocation="http://java.sun.com/xml/ns/javaee
-   http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
-   <context-param>
-   <param-name>contextConfigLocation</param-name>
-   <param-value>/WEB-INF/spring/root-context.xml</param-value>
-   </context-param>
-   <listener>
-   <listener-class>
-   org.springframework.web.context.ContextLoaderListener
-   </listener-class>
-   </listener>
-   <servlet>
-   <servlet-name>appServlet</servlet-name>
-   <servlet-class>
-   org.springframework.web.servlet.DispatcherServlet
-   </servlet-class>
-   <load-on-startup>1</load-on-startup>
-   </servlet>
-   <servlet-mapping>
-   <servlet-name>appServlet</servlet-name>
-   <url-pattern>/</url-pattern>
-   </servlet-mapping>
-   </web-app>
-   ```
-   Servlet Filter is used for monitoring request and response from client to the servlet, or to modify the request and response, or to audit and log.
+### Chapter 7 Advanced Spring MVC (upload file, handle exception)
+#####7.1 Setup Spring MVC 
+web.xml
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app version="2.5"
+xmlns="http://java.sun.com/xml/ns/javaee"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://java.sun.com/xml/ns/javaee
+http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
+<context-param>
+<param-name>contextConfigLocation</param-name>
+<param-value>/WEB-INF/spring/root-context.xml</param-value>
+</context-param>
+<listener>
+<listener-class>
+org.springframework.web.context.ContextLoaderListener
+</listener-class>
+</listener>
+<servlet>
+<servlet-name>appServlet</servlet-name>
+<servlet-class>
+org.springframework.web.servlet.DispatcherServlet
+</servlet-class>
+<load-on-startup>1</load-on-startup>
+</servlet>
+<servlet-mapping>
+<servlet-name>appServlet</servlet-name>
+<url-pattern>/</url-pattern>
+</servlet-mapping>
+</web-app>
+```
+
+Servlet Filter is used for monitoring request and response from client to the servlet, or to modify the request and response, or to audit and log.
    
-   Servlet Listener is used for listening to events in a web containers, such as when you create a session, or place an attribute in an session or if you 
-   passivate and activate in another container, to subscribe to these events you can configure listener in web.xml, for example HttpSessionListener
+Servlet Listener is used for listening to events in a web containers, such as when you create a session, or place an attribute in an session or if you passivate and activate in another container, to subscribe to these events you can configure listener in web.xml, for example HttpSessionListener
    
-   One important difference is often overlooked: while listeners get triggered for an actual physical request, filters work with servlet container dispatches. 
-   For one listener invocation there may be multiple filters/servlet invocations.
-   
-   1) The contextConfigLocation context parameter specifies the location of the XML file that defines the root 
-      application context loaded by ContextLoaderListener.
-   2) DispatcherServlet loads its application context with beans defined in a file whose
-      name is based on the servlet name.
+One important difference is often overlooked: while listeners get triggered for an actual physical request, filters work with servlet container dispatches. 
+
+For one listener invocation there may be multiple filters/servlet invocations.
+
+1) The contextConfigLocation context parameter specifies the location of the XML file that defines the root 
+application context loaded by ContextLoaderListener.
+2) DispatcherServlet loads its application context with beans defined in a file whose
+name is based on the servlet name.
       
       
- 7.2 Multipart form data (upload file)
- 
- 1) Configuring a multipart resolver
+ #####7.2 Multipart form data (upload file)
+ ```
+ Configuring a multipart resolver
  Two out-of-the-box implementations of MultipartResolver to choose from:
  * StandardServletMultipartResolver (recommended)—Relies on Servlet 3.0 support for multipart requests (since Spring 3.1)
  * CommonsMultipartResolver (for pre-Servlet 3.0)—Resolves multipart requests using Jakarta Commons FileUpload
 
 Generally speaking, StandardServletMultipartResolver should probably be your first choice of these two. It uses existing 
 support in your servlet container and does not require any additional project dependencies
+```
 
-
-StandardServletMultipartResolver: 
+1)StandardServletMultipartResolver: 
 constructor accepts the following:
   * Temporary file path where the file will be written during the upload
   * The maximum size (in bytes) of any file uploaded. By default there is no limit.
@@ -714,7 +697,6 @@ constructor accepts the following:
   will be written to disk.
   
   ```xml
-  
   <servlet>
   <servlet-name>appServlet</servlet-name>
   <servlet-class>
@@ -729,11 +711,8 @@ constructor accepts the following:
   </servlet
   ```
   
-  CommonsMultipartResolver: 
-  Unlike StandardServletMultipartResolver, there’s no need to configure a temporary
-  file location with CommonsMultipartResolver.By default, the location is the servlet
-  container’s temporary directory. But you can specify  a different location by setting
-  the uploadTempDir property:
+  2)CommonsMultipartResolver: 
+Unlike StandardServletMultipartResolver, there’s no need to configure a temporary file location with CommonsMultipartResolver.By default, the location is the servlet container’s temporary directory. But you can specify  a different location by setting the uploadTempDir property:
   ```java
   @Bean
   public MultipartResolver multipartResolver() throws IOException {
@@ -747,7 +726,7 @@ constructor accepts the following:
   }
   ```
   
-  2) handling multipart requests
+#####7.3 handling multipart requests
   in controller method:@RequestPart
   ```java
   
