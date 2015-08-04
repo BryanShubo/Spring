@@ -1,7 +1,7 @@
 SpringInActionExamples
 ======================
 ### Chapter 1
-1. Without DI: DamselRescuingKnight
+#####1.1 Without DI: DamselRescuingKnight
 As you can see, DamselRescuingKnight creates its own quest, a RescueDamselQuest,
 in the constructor. This makes a DamselRescuingKnight tightly coupled to a Rescue-
 DamselQuest and severely limits the knight’s quest-embarking repertoire. If a damsel
