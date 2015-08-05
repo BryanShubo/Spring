@@ -800,7 +800,7 @@ constructor accepts the following:
   2) handling multipart requests
   in controller method:@RequestPart
   ```java
-  
+  i: byte[], using transferTo() method
   @RequestMapping(value="/register", method=POST)
   public String processRegistration(
   @RequestPart("profilePicture") byte[] profilePicture,
@@ -808,5 +808,173 @@ constructor accepts the following:
   Errors errors) {
   ...
   }
+  
+  
+  profilePicture.transferTo(
+  new File("/data/spittr/" + profilePicture.getOriginalFilename()));
+  
+  ii: Part, using write() method
+  @RequestMapping(value="/register", method=POST)
+  public String processRegistration(
+  @RequestPart("profilePicture") Part profilePicture,
+  @Valid Spitter spitter,
+  Errors errors) {
+  ...
+  }
+  
+  profilePicture.write("/data/spittr/" +
+  profilePicture.getOriginalFilename());
   ```
+  It’s worth noting that if you write your controller handler methods to accept file
+  uploads via a Part parameter, then you don’t need to configure the StandardServlet-
+  MultipartResolver bean. StandardServletMultipartResolver is required only
+  when you’re working with MultipartFile.
+  
+  
+  7.3 Handling exceptions
+  Spring offers a handful of ways to translate exceptions to responses:
+  * Certain Spring exceptions are automatically mapped to specific HTTP status codes.
+  * An exception can be annotated with @ResponseStatus to map it to an HTTP status code.
+  * A method can be annotated with @ExceptionHandler to handle the exception
+  
+  ```
+  Spring exception HTTP status code
+  BindException 400 - Bad Request
+  ConversionNotSupportedException 500 - Internal Server Error
+  HttpMediaTypeNotAcceptableException 406 - Not Acceptable
+  HttpMediaTypeNotSupportedException 415 - Unsupported Media Type
+  HttpMessageNotReadableException 400 - Bad Request
+  HttpMessageNotWritableException 500 - Internal Server Error
+  HttpRequestMethodNotSupportedException 405 - Method Not Allowed
+  MethodArgumentNotValidException 400 - Bad Request
+  MissingServletRequestParameterException 400 - Bad Request
+  MissingServletRequestPartException 400 - Bad Request
+  NoSuchRequestHandlingMethodException 404 - Not Found
+  TypeMismatchException 400 - Bad Request
+  ```
+  
+  1) Mapping exceptions to HTTP status code (Customize exception display info)
+  ```java
+  @ResponseStatus(value=HttpStatus.NOT_FOUND, reason="Spittle Not Found")
+  public class SpittleNotFoundException extends RuntimeException {
+  
+  }
+  ```
+  
+  2) Writing exception-handling methods
+  if you want the response to carry more than just a status code that represents the error
+  that occurred
+  ```java
+  @RequestMapping(method=RequestMethod.POST)
+  public String saveSpittle(SpittleForm form, Model model) {
+  spittleRepository.save(
+  new Spittle(null, form.getMessage(), new Date(),
+  form.getLongitude(), form.getLatitude()));
+  return "redirect:/spittles";
+  }
+  As you can see, saveSpittle() is now much simpler. Because it’s written to only be
+  concerned with the successful saving of a Spittle, it has only one path and is easy to
+  follow (and test).
+  Now let’s add a new method to SpittleController that will handle the case where
+  DuplicateSpittleException is thrown:
+  @ExceptionHandler(DuplicateSpittleException.class)
+  public String handleDuplicateSpittle() {
+  return "error/duplicate";
+  }
+  ```
+  The @ExceptionHandler annotation has been applied to the handleDuplicateSpittle() method, 
+  designating it as the go-to method when a DuplicateSpittle-
+  Exception is thrown. It returns a String, which, just as with the request-handling
+  method, specifies the logical name of the view to render, telling the user that they
+  attempted to create a duplicate entry.
+  
+  What’s especially interesting about @ExceptionHandler methods is that they handle
+  their exceptions from any handler method in the same controller. So although
+  you created the handleDuplicateSpittle() method from the code extracted from
+  saveSpittle(), it will handle a DuplicateSpittleException thrown from any
+  method in SpittleController. Rather than duplicate exception-handling code in
+  every method that has the potential for throwing a DuplicateSpittleException, this
+  one method covers them all.
+  
+  @ExceptionHandler methods can handle exceptions thrown from any handler
+  method in the **same controller class**.
+  
+  **advice class**(Spring 3.2) can handle exceptions thrown from handler methods in **any controller**. 
+  
+  
+  
+  7.4 Advising controllers
+  To consistently handle common tasks, including exception handling, across all
+  controllers in your application.
+  
+  A controller advice is any class that’s annotated with @ControllerAdvice and has one or more of the following
+  kinds of methods:
+  ** @ExceptionHandler-annotated
+  ** @InitBinder-annotated
+  ** @ModelAttribute-annotated
+  
+  
+  Those methods in an @ControllerAdvice-annotated class are applied globally across
+  all @RequestMapping-annotated methods on all controllers in an application.
+  ```java
+  package spitter.web;
+  import org.springframework.web.bind.annotation.ControllerAdvice;
+  import org.springframework.web.bind.annotation.ExceptionHandler;
+  @ControllerAdvice
+  public class AppWideExceptionHandler {
+  @ExceptionHandler(DuplicateSpittleException.class)
+  public String duplicateSpittleHandler() {
+  return "error/duplicate";
+  }
+  }
+  ```
+  
+  7.5 Carrying data across redirect requests
+  It’s generally a good practice to perform a redirect after handling a POST request. Among other
+  things, this prevents the client from reissuing a dangerous POST request if the user clicks the Refresh or 
+  back-arrow button in their browser
+  
+  ```java
+  return "redirect:/spitter/" + spitter.getUsername();
+  ```
+  **Forward**: when a handler method completes, any model data specified in the method is copied into the request 
+  as request attributes, and the request is forwarded to the view for rendering. Because it’s the **same request** 
+  that’s handled by both the controller method and the view, the request attributes survive the forward.
+  
+  **Redirect**: Any model data carried in the original request dies with the request. 
+                The new request is devoid of any model data in its attributes and has to figure it out on its own.
+                
+  Two options to solve carrying data across redirect request:
+  * Passing data as path variables and/or query parameters using URL templates
+  * Sending data in flash attributes
+  
+  1) Redirecting with URL templates
+  Sending data across a redirect via path variables and query parameters is only good for sending simple values,
+  such as String and numeric values. It does not work for **passing object**.
+  ```
+  return "redirect:/spitter/{username}";
+  return "redirect:/spitter/habuma?spitterId=42"
+  ```
+  
+  2) Flash Attributes
+  One option is to put the Spitter into the session. You put the Spitter into the session before the redirect and
+  then retrieve it from the session after the redirect. One more step, cleaning it up from the session after the redirect
+  
+  Flash attributes, by definition, carry data until the next request; then they go away.
+  method: model.addFlashAttribute()
+  ```java
+  @RequestMapping(value="/register", method=POST)
+  public String processRegistration(
+  Spitter spitter, RedirectAttributes model) {
+  spitterRepository.save(spitter);
+  model.addAttribute("username", spitter.getUsername());
+  model.addFlashAttribute("spitter", spitter);
+  return "redirect:/spitter/{username}";
+  }
+  ```
+  
+  Before the redirect takes place, all flash attributes are copied into the session. After
+  the redirect, the flash attributes stored in the session are moved out of the session and
+  into the model. The method that handles the redirect request can then access the
+  Spitter from the model, just like any other model object. 
   
