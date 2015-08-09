@@ -1971,16 +1971,354 @@ to be served to the client.
 2) Message conversion—A message converter transforms an object returned from
 the controller into a representation to be served to the client.
 ```
+#####16.2.1 Negotiating resource representation
+If the client wants JSON data, then an HTML-rendering view won’t do—even if the view
+name matches.
+
+Spring’s ContentNegotiatingViewResolver is a special view resolver that takes the
+content type that the client wants into consideration.
+```java
+@Bean
+public ViewResolver cnViewResolver() {
+return new ContentNegotiatingViewResolver();
+}
+```
+content-negotiation two-step:
+```
+1) Determine the requested media type(s).
+2) Find the best view for the requested media type(s).
+```
+
+**DETERMINING THE REQUESTED MEDIA TYPES**
+ContentNegotiatingViewResolver
+```
+1) URL’s file extension(.json, .xml, or .html)
+2) Request header
+3) Default content type
+
+```
+**INFLUENCING HOW MEDIA TYPES ARE CHOSEN**
+
+ContentNegotiationManager can change how it behaves
+```
+Specify a default content type to fall back to if a content type can’t be derived from the request.
+1) Specify a content type via a request parameter.
+2) Ignore the request’s Accept header.
+3) Map request extensions to specific media types.
+4) Use the Java Activation Framework (JAF) as a fallback option for looking up media types from extensions.
+```
+There are three ways to configure a ContentNegotiationManager:
+```
+1) Directly declare a bean whose type is ContentNegotiationManager.
+2) Create the bean indirectly via ContentNegotiationManagerFactoryBean.
+3) Override the configureContentNegotiation() method of WebMvcConfigurerAdapter.
+```
+
+**THE BENEFITS AND LIMITATIONS OF CONTENTNEGOTIATINGVIEWRESOLVER**
+**Benefits**: The key benefit of using ContentNegotiatingViewResolver is that it layers REST
+resource representation on top of the Spring MVC with no change in controller code.
+The same controller method that serves human-facing HTML content can also serve
+JSON or XML to a non-human client.
+
+Content negotiation is a convenient option when there’s a great deal of overlap
+between your human and non-human interfaces. In practice, though, human-facing
+views rarely deal at the same level of detail as a REST API. The benefit of Content-
+NegotiatingViewResolver isn’t realized when there isn’t much overlap between the
+human and non-human interfaces.
+
+**Limitations**: ContentNegotiatingViewResolver also has a serious limitation. As a View-
+Resolver implementation, it only has an opportunity to determine how a resource is
+rendered to a client. It has no say in what representations a controller can consume
+from the client. If the client is sending JSON or XML, then ContentNegotiatingViewResolver isn’t much help.
+There’s one more gotcha associated with using ContentNegotiatingViewResolver.
+The View chosen renders the model—not the resource—to the client. This is a subtle but important distinction.
+
+
+**Summary**
+Because of these limitations, I generally prefer not to use ContentNegotiating-
+ViewResolver. Instead, I lean heavily toward using Spring’s message converters for
+producing resource representations. Let’s see how you can employ Spring’s message
+converters in your controller methods
+
+#####16.2.2 Working with HTTP message converters
+When using message conversion, DispatcherServlet doesn’t bother with ferrying model data to a view. In fact, there is
+no model, and there is no view. There is only data produced by the controller and a
+resource representation produced when a message converter transforms that data.
+
+
+Spring provides several HTTP message converters that marshal resource representations
+to and from various Java types.
+```
+i AtomFeedHttpMessageConverter: Converts Rome Feed objects to and from Atom feeds (media type application/atom+xml).
+                                Registered if the Rome library is present on the classpath.
+
+ii BufferedImageHttpMessageConverter: Converts BufferedImage to and from image binary data.
+
+iii ByteArrayHttpMessageConverter: Reads and writes byte arrays. Reads from all media types (*/*), and writes as application/ octet-stream.
+
+iv FormHttpMessageConverter: Reads content as application/x-www-form-urlencoded into a MultiValueMap<String,String>. Also writes MultiValueMap<String,String> as application/x-www-form-urlencoded and MultiValueMap<String, Object> as multipart/form-data.
+
+v Jaxb2RootElementHttpMessageConverter: Reads and writes XML (either text/xml or application/xml) to and from JAXB2-annotated objects. Registered if JAXB v2 libraries are present on the classpath.
+
+vi MappingJacksonHttpMessageConverter: Reads and writes JSON to and from typed objects or untyped HashMaps. Registered if the Jackson JSON library is present on the classpath.
+
+vii MappingJackson2HttpMessageConverter: Reads and writes JSON to and from typed objects or untyped HashMaps. Registered if the Jackson 2 JSON library is present on the classpath.
+
+viii MarshallingHttpMessageConverter: Reads and writes XML using an injected marshaler and unmarshaler. Supported (un)marshalers include Castor, JAXB2, JIBX, XMLBeans, and XStream.
+
+ix ResourceHttpMessageConverter: Reads and writes org.springframework.core.io.Resource.
+
+x RssChannelHttpMessageConverter Reads and writes RSS feeds to and from Rome Channel objects. Registered if the Rome library is present on the classpath.
+
+xi SourceHttpMessageConverter Reads and writes XML to and from javax.xml.transform.Source objects.
+
+xii StringHttpMessageConverter:  Reads all media types (*/*) into a String. Writes String to text/plain.
+
+xiii XmlAwareFormHttpMessageConverter An extension of FormHttpMessageConverter that adds support for XML-based parts using a SourceHttpMessageConverter
+```
+
+**RETURNING RESOURCE STATE IN THE RESPONSE BODY**
+```java
+@RequestMapping(method=RequestMethod.GET,
+produces="application/json")
+public @ResponseBody List<Spittle> spittles(
+@RequestParam(value="max",
+defaultValue=MAX_LONG_AS_STRING) long max,
+@RequestParam(value="count", defaultValue="20") int count) {
+return spittleRepository.findSpittles(max, count);
+}
+```
+
+**RECEIVING RESOURCE STATE IN THE REQUEST BODY**
+```java
+@RequestMapping(
+method=RequestMethod.POST
+consumes="application/json")
+public @ResponseBody
+Spittle saveSpittle(@RequestBody Spittle spittle) {
+return spittleRepository.save(spittle);
+}
+```
+
+**DEFAULTING CONTROLLERS FOR MESSAGE CONVERSION**
+Using @RestController instead of @Controller, Spring applies message conversion to all handler methods in the controller.
+```java
+@RestController
+@RequestMapping("/spittles")
+public class SpittleController {
+private static final String MAX_LONG_AS_STRING="9223372036854775807";
+private SpittleRepository spittleRepository;
+@Autowired
+public SpittleController(SpittleRepository spittleRepository) {
+this.spittleRepository = spittleRepository;
+}
+@RequestMapping(method=RequestMethod.GET)
+public List<Spittle> spittles(
+@RequestParam(value="max",
+defaultValue=MAX_LONG_AS_STRING) long max,
+@RequestParam(value="count", defaultValue="20") int count) {
+return spittleRepository.findSpittles(max, count);
+}
+@RequestMapping(
+method=RequestMethod.POST
+consumes="application/json")
+public Spittle saveSpittle(@RequestBody Spittle spittle) {
+return spittleRepository.save(spittle);
+}
+}
+
+```
+
+#####16.3 Serving more than resources
+The @ResponseBody annotation is helpful in transforming a Java object returned from
+a controller to a resource representation to send to the client. As it turns out, serving
+a resource’s representation to a client is only part of the story. A good REST API does
+more than transfer resources between the client and server. It also gives the client
+additional metadata to help the client understand the resource or know what has just
+taken place in the request.
+
+**16.3.1 Communicating errors to the client**
+**16.3.2 Setting headers in the response**
+
+#####16.3.1 Communicating errors to the client
+Spring offers a few options for dealing with such scenarios:
+```
+1) Status codes can be specified with the @ResponseStatus annotation.
+2) Controller methods can return a ResponseEntity that carries more metadata concerning the response.
+3) An exception handler can deal with the error cases, leaving the handler methods to focus on the happy path.
+```
+
+**WORKING WITH ResponseEntity**
+```java
+@RequestMapping(value="/{id}", method=RequestMethod.GET)
+public ResponseEntity<Spittle> spittleById(@PathVariable long id) {
+Spittle spittle = spittleRepository.findOne(id);
+HttpStatus status = spittle != null ?
+HttpStatus.OK : HttpStatus.NOT_FOUND;
+return new ResponseEntity<Spittle>(spittle, status);
+}
+```
+
+#####16.3.2 Setting headers in the response
+```java
+@RequestMapping(
+method=RequestMethod.POST
+consumes="application/json")
+public ResponseEntity<Spittle> saveSpittle(
+@RequestBody Spittle spittle) {
+Spittle spittle = spittleRepository.save(spittle);
+HttpHeaders headers = new HttpHeaders();
+URI locationUri = URI.create(
+"http://localhost:8080/spittr/spittles/" + spittle.getId());
+headers.setLocation(locationUri);
+ResponseEntity<Spittle> responseEntity =
+new ResponseEntity<Spittle>(
+spittle, headers, HttpStatus.CREATED)
+return responseEntity;
+}
+```
+
+Using a UriComponentsBuilder to construct the location URI
+```java
+@RequestMapping(
+method=RequestMethod.POST
+consumes="application/json")
+public ResponseEntity<Spittle> saveSpittle(
+@RequestBody Spittle spittle,
+UriComponentsBuilder ucb) {
+Spittle spittle = spittleRepository.save(spittle);
+HttpHeaders headers = new HttpHeaders();
+URI locationUri =
+ucb.path("/spittles/")
+.path(String.valueOf(spittle.getId()))
+.build()
+.toUri();
+headers.setLocation(locationUri);
+ResponseEntity<Spittle> responseEntity =
+new ResponseEntity<Spittle>(
+spittle, headers, HttpStatus.CREATED)
+return responseEntity;
+}
+```
+
+
+#####16.4 Consuming REST resources
+RestTemplate defines 11 unique operations, each of which is overloaded for a total of 36 methods.
+```
+delete():  Performs an HTTP DELETE request on a resource at a specified URL
+
+exchange(): Executes a specified HTTP method against a URL, returning a ResponseEntity containing an object mapped from the response body
+
+execute() Executes a specified HTTP method against a URL, returning an object mapped from the response body
+
+getForEntity() Sends an HTTP GET request, returning a ResponseEntity containing an object mapped from the response body
+
+getForObject() Sends an HTTP GET request, returning an object mapped from a response body
+
+headForHeaders() Sends an HTTP HEAD request, returning the HTTP headers for the specified resource URL
+
+optionsForAllow() Sends an HTTP OPTIONS request, returning the Allow header for the specified URL
+
+postForEntity() POSTs data to a URL, returning a ResponseEntity containing an object mapped from the response body
+
+postForLocation() POSTs data to a URL, returning the URL of the newly created resource
+
+postForObject() POSTs data to a URL, returning an object mapped from the response body
+
+put() PUTs resource data to the specified URL
+```
+
+
+###Chapter 17: Messaging in Spring
+Using RMI, Hessian, Burlap, the HTTP invoker, and web services to enable synchronous communication in which a client
+application directly contacts a remote service and waits for the remote procedure to complete before continuing.
+
+Asynchronous messaging is a way of indirectly sending messages from one application to another without waiting for a
+response. Asynchronous messaging has several advantages over synchronous messaging:
+```
+1) Synchronous communication implies waiting
+2) The client is coupled to the service through the service’s interface
+3) The client is coupled to the service’s location.
+4) The client is coupled to the service’s availability
+
+NO WAITING
+
+MESSAGE ORIENTATION AND DECOUPLING
+
+LOCATION INDEPENDENCE:
+In the point-to-point model, it’s possible to take advantage of location independence
+to create a cluster of services. If the client is unaware of the service’s location,
+and if the service’s only requirement is that it must be able to access the message broker,
+there’s no reason multiple services can’t be configured to pull messages from the
+same queue. If the service is overburdened and falling behind in its processing, all you
+need to do is start a few more instances of the service to listen to the same queue.
+
+Location independence takes on another interesting side effect in the publish/
+subscribe model. Multiple services could all subscribe to a single topic, receiving
+duplicate copies of the same message. But each service could process that message differently.
+For example, let’s say you have a set of services that together process a message
+that details the new hire of an employee. One service might add the employee to
+the payroll system, another adds them to the HR portal, and yet another makes sure
+the employee is given access to the systems they’ll need to do their job. Each service
+works independently on the same data that they all received from a topic.
+
+
+GUARANTEED DELIVERY:
+In order for a client to communicate with a synchronous service, the service must be
+listening at the IP address and port specified. If the service were to go down or otherwise
+become unavailable, the client wouldn’t be able to proceed.
+But when sending messages asynchronously, the client can rest assured that its
+messages will be delivered. Even if the service is unavailable when a message is sent,
+the message will be stored until the service is available again.
+```
 
 
 
+**Java MessageService (JMS)**
+**Advanced Message Queuing Protocol (AMQP)**
+
+#####17.1 A brief introduction to asynchronous messaging
+Indirection is the key to asynchronous messaging.
+
+When one application sends a message to another, there’s no direct link between the two applications.
+Instead, the sending application places the message in the hands of a service that will ensure delivery to the receiving application.
+
+There are two main actors in asynchronous messaging: **message brokers** and **destinations**.
+
+**message broker** ensures that the message is delivered to the specified destination.
+
+Destinations are only concerned about where messages will be picked up—not who will pick them up.
+
+There are two common types of destinations: **queues** (point to point)and **topics** (publish/subscribe).
 
 
+**POINT-TO-POINT MESSAGING**
+```
+In the point-to-point model, each message has exactly one sender and one receiver.
 
+Because the message is removed from the queue as it’s delivered, it’s guaranteed that
+the message will be delivered to only one receiver.
 
+Likewise, with point-to-point messaging, if multiple receivers are listening to a
+queue, there’s no way of knowing which one will process a specific message.
 
+This uncertainty is a good thing, because it enables an application to scale up message processing
+by adding another listener to the queue.
+```
 
+**PUBLISH-SUBSCRIBE MESSAGING**
+```
+In the publish/subscribe messaging model, messages are sent to a topic.
 
+All subscribers to a topic receive a copy of the message.
+
+The magazine analogy breaks down when you realize that the publisher has no
+idea who its subscribers are. The publisher only knows that its message will be published
+to a particular topic—not who’s listening to that topic. This also implies that
+the publisher has no idea how the message will be processed.
+```
+
+#####17.2 Sending messages with JMS
 
 
 
