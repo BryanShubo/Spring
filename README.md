@@ -911,3 +911,1097 @@ the uploadTempDir property:
   Spitter from the model, just like any other model object. 
   
 
+
+### Chapter 8: Spring Web Flow
+Applications:
+```
+Checkout process on an e-commerce site.
+Application process
+```
+What is Spring Web Flow:
+```
+Spring Web Flow is a web framework that enables the development of elements following
+a prescribed flow.
+
+It does this by separating the definition of an application’s
+flow from the classes and views that implement the flow’s behavior.
+```
+
+#####8.1 Configure Web Flow
+1) **flow executor** creates and launches an instance of the flow execution for that user.
+2) **flow registry** is used to load flow definitions and make them available to the flow executor.
+3) **FlowHandlerMapping** is used to help DispatcherServlet know that it should send flow requests to Spring Web Flow.
+4) **FlowHandlerAdapter** is used to answer that call. A FlowHandlerAdapter is equivalent to a Spring MVC controller in that
+      it handles requests coming in for a flow and processes those requests.
+
+
+1) **flow executor** drives the execution of a flow. When a user enters a flow, the flow executor creates and launches
+an instance of the flow execution for that user.
+```xml
+<flow:flow-executor id="flowExecutor" />
+```
+**flow executor** is responsible for creating and executing flows. **NOT** responsible for loading flow definitions.
+
+2) **flow registry** is to load flow definitions and make them available to the flow executor.
+```xml
+<flow:flow-registry id="flowRegistry" base-path="/WEB-INF/flows">
+<flow:flow-location-pattern value="*-flow.xml" />
+</flow:flow-registry>
+```
+or
+```xml
+<flow:flow-registry id="flowRegistry">
+<flow:flow-location path="/WEB-INF/flows/springpizza.xml" />
+</flow:flow-registry>
+```
+
+3) **FlowHandlerMapping** to help DispatcherServlet know that it should send flow requests to Spring Web Flow.
+```xml
+   <bean class="org.springframework.webflow.mvc.servlet.FlowHandlerMapping">
+   <property name="flowRegistry" ref="flowRegistry" />
+   </bean>
+```
+
+4) FlowHandlerMapping’s job is to direct flow requests to Spring Web Flow,
+   **FlowHandlerAdapter** to answer that call. A FlowHandlerAdapter is equivalent to a Spring MVC controller in that
+   it handles requests coming in for a flow and processes those requests.
+```xml
+   <bean class="org.springframework.webflow.mvc.servlet.FlowHandlerAdapter">
+   <property name="flowExecutor" ref="flowExecutor" />
+   </bean>
+```
+
+
+#####8.2 Components
+1) States: are points in a flow where something happens.
+2) Transitions: are roads that are connect these points.
+3) Flow Data: the current condition of flow.
+
+#####8.2.1 States: five states (Action, Decision, End, Subflow, and View)
+```
+i Action: Action states are where the logic of a flow takes place.
+ii Decision: Decision states branch the flow in two directions, routing the flow based on the outcome of evaluating flow data.
+iii End: The end state is the last stop for a flow. Once a flow has reached its end state, the flow is terminated.
+iv Subflow: A subflow state starts a new flow in the context of a flow that is already underway.
+v View: A view state pauses the flow and invites the user to participate in the flow
+```
+
+**View**
+View states are used to display information to the user and to offer the user an opportunity
+to play an active role in the flow.
+```xml
+<view-state id="welcome" />
+or
+<view-state id="welcome" view="greeting" />
+or
+<view-state id="takePayment" model="flowScope.paymentDetails"/>
+```
+
+**ACTION STATES**
+Action states are where the application itself goes to work.
+Action states typically invoke some method on a Spring-managed bean and then transition to another state depending on the outcome of the method call.
+```xml
+<action-state id="saveOrder">
+<evaluate expression="pizzaFlowActions.saveOrder(order)" />
+<transition to="thankYou" />
+</action-state>
+```
+
+**DECISION STATES**
+Decision states enable a binary branch in a flow execution. A decision state evaluates
+a Boolean expression and takes one of two transitions, depending on whether the
+expression evaluates to true or false.
+```xml
+<decision-state id="checkDeliveryArea">
+<if test="pizzaFlowActions.checkDeliveryArea(customer.zipCode)"
+then="addCustomer"
+else="deliveryWarning" />
+</decision-state>
+```
+
+**SUBFLOW STATES**
+The <subflow-state> element lets you call another flow from within an executing flow.
+It’s analogous to calling a method from within another method.
+```xml
+<subflow-state id="order" subflow="pizza/order">
+<input name="order" value="order"/>
+<transition on="orderCreated" to="payment" />
+</subflow-state>
+```
+Here, the <input> element is used to pass the order object as input to the subflow.
+And if the subflow ends with an <end-state> whose ID is orderCreated, then the flow
+will transition to the state whose ID is payment.
+
+
+**END STATES**
+The <end-state> element designates the end of a flow:
+```xml
+<end-state id="customerReady" />
+```
+When the flow reaches an <end-state>, the flow ends. What happens next depends
+on a few factors:
+```
+i: If the flow that’s ending is a subflow, the calling flow will proceed from the
+<subflow-state>. The <end-state>’s ID will be used as an event to trigger the transition away from the <subflow-state>.
+
+ii: If the <end-state> has its view attribute set, the specified view will be rendered.
+The view may be a flow-relative path to a view template, prefixed with externalRedirect: to redirect to some page
+external to the flow, or prefixed with flowRedirect: to redirect to another flow.
+
+iii: If the ending flow isn’t a subflow and no view is specified, the flow ends. The
+browser lands on the flow’s base URL, and, with no current flow active, a new
+instance of the flow begins.
+```
+
+#####8.2.2 Transitions
+Every state in a flow, with the exception of end states, should have at least one transition so that the
+flow will know where to go once that state has completed. A state may have multiple
+transitions, each one representing a different path that could be taken on completion of the state.
+
+```xml
+<transition to="customerReady" />
+or
+<transition on="phoneEntered" to="lookupCustomer"/>
+<!--In above example, the flow will transition to the state whose ID is lookupCustomer if a
+    phoneEntered event is fired.-->
+
+<transition on-exception= "com.springinaction.pizza.service.CustomerNotFoundException"
+            to="registrationForm" />
+```
+
+**GLOBAL TRANSITIONS**
+Rather than repeat common transitions in multiple states, you can define them
+as global transitions by placing the <transition> element as a child of a <globaltransitions>
+element.
+```xml
+<global-transitions>
+<transition on="cancel" to="endState" />
+</global-transitions>
+```
+With this global transition in place, all states in the flow will have an implicit cancel
+transition.
+
+#####8.2.3 Flow Data
+**DECLARING VARIABLES**
+Flow data is stored in variables that can be referenced at various points in the flow. It
+can be created and accumulated in several ways.
+<var> is always flow scoped.
+```xml
+<var name="customer" class="com.springinaction.pizza.domain.Customer"/>
+```
+This variable is available to all states in a flow.
+
+<evaluate> element: view-scoped.
+```xml
+<evaluate result="viewScope.toppingsList"
+expression="T(com.springinaction.pizza.domain.Topping).asList()" />
+```
+
+<set> element can set a variable’s value: flow scoped.
+```xml
+<set name="flowScope.pizza"
+value="new com.springinaction.pizza.domain.Pizza()" />
+```
+
+**SCOPING FLOW DATA**
+The lifespan and visibility of data carried in a flow will vary depending on the scope of
+the variable it’s kept in.
+```
+i Conversation: Created when a top-level flow starts, and destroyed when the top-level flow ends. Shared by a top-level flow and all of its subflows.
+ii Flow:  Created when a flow starts, and destroyed when the flow ends. Only visible in the flow it was created by.
+iii Request: Created when a request is made into a flow, and destroyed when the flow returns.
+iv Flash:  Created when a flow starts, and destroyed when the flow ends. It’s also cleared out after a view state renders.
+v View: Created when a view state is entered, and destroyed when the state exits. Visible only in the view state.
+```
+
+#####8.3 Pizza flow
+Simple flow:
+
+start->identify customer--(customerReady)-->buildOrder--(orderCreated)-->takePayment
+--(paymentTaken)-->saveOrder->thankCustomer->endState
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<flow xmlns="http://www.springframework.org/schema/webflow"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://www.springframework.org/schema/webflow
+http://www.springframework.org/schema/webflow/spring-webflow-2.3.xsd">
+<var name="order"
+class="com.springinaction.pizza.domain.Order"/>
+<subflow-state id="identifyCustomer" subflow="pizza/customer">
+<output name="customer" value="order.customer"/>
+<transition on="customerReady" to="buildOrder" />
+</subflow-state>
+<subflow-state id="buildOrder" subflow="pizza/order">
+<input name="order" value="order"/>
+<transition on="orderCreated" to="takePayment" />
+</subflow-state>
+<subflow-state id="takePayment" subflow="pizza/payment">
+<input name="order" value="order"/>
+<transition on="paymentTaken" to="saveOrder"/>
+</subflow-state>
+<action-state id="saveOrder">
+<evaluate expression="pizzaFlowActions.saveOrder(order)" />
+<transition to="thankCustomer" />
+</action-state>
+<view-state id="thankCustomer">
+<transition to="endState" />
+</view-state>
+<end-state id="endState" />
+<global-transitions>
+<transition on="cancel" to="endState" />
+</global-transitions>
+</flow
+```
+
+Customer state
+```xml
+<html xmlns:jsp="http://java.sun.com/JSP/Page"
+xmlns:form="http://www.springframework.org/tags/form">
+<jsp:output omit-xml-declaration="yes"/>
+<jsp:directive.page contentType="text/html;charset=UTF-8" />
+<head><title>Spizza</title></head>
+<body>
+<h2>Welcome to Spizza!!!</h2>
+<form:form>
+<input type="hidden" name="_flowExecutionKey"
+value="${flowExecutionKey}"/>
+<input type="text" name="phoneNumber"/><br/>
+<input type="submit" name="_eventId_phoneEntered"
+value="Lookup Customer" />
+</form:form>
+</body>
+</html>
+```
+
+#####8.4 Secure Web Flow
+States, transitions, and entire flows can be secured in Spring Web Flow by using the
+<secured> element as a child of those elements. For example, to secure access to a
+view state, you might use <secured> like this:
+```xml
+<view-state id="restricted">
+<secured attributes="ROLE_ADMIN" match="all"/>
+</view-state>
+```
+
+
+###Chapter 9: Securing Web Applications
+Spring Security is a security framework that provides declarative security for your
+Spring-based applications.
+
+Spring Security provides a comprehensive security solution, handling authentication and authorization at
+both the **web request level** and at the **method invocation level**.
+
+Now at version 3.2, Spring Security tackles security from two angles.
+1)To secure web requests and restrict access at the URL level, Spring Security uses servlet filters.
+
+2)Spring Security can also secure method invocations using Spring AOP, proxying objects and applying advice to ensure that the user has the proper authority to invoke secured
+methods.
+
+We’ll focus on web-layer security with Spring Security in this chapter.
+Later, in chapter 14, we’ll revisit Spring Security and see how it can be used to secure method invocations.
+
+#####9.1.1 Spring Security Modules
+
+11 Spring Security Modules (core, configuration,web)
+```
+i ACL: Provides support for domain object security through access control lists (ACLs).
+ii Aspects:  A small module providing support for AspectJ-based aspects instead of standard
+             Spring AOP when using Spring Security annotations.
+iii CAS:  Client Support for single sign-on authentication using Jasig’s Central Authentication
+          Service (CAS).
+iv: Configuration: Contains support for configuring Spring Security with XML and Java. (Java configuration
+                   support introduced in Spring Security 3.2.)
+v Core: Provides the essential Spring Security library.
+vi Cryptography: Provides support for encryption and password encoding.
+vii LDAP: Provides support for LDAP-based authentication.
+viii OpenID:  Contains support for centralized authentication with OpenID.
+ix Remoting: Provides integration with Spring Remoting.
+x Tag Library: Spring Security’s JSP tag library.
+xi Web: Provides Spring Security’s filter-based web security support.
+```
+
+#####9.1.2 Filtering web requests
+DelegatingFilterProxy is a special servlet filter that, by itself, doesn’t do much.
+Instead, it delegates to an implementation of javax.servlet.Filter that’s registered
+as a <bean> in the Spring application context:
+
+If you like configuring servlets and filters in the traditional web.xml file, you can do
+that with the <filter> element, like this:
+```xml
+<filter>
+<filter-name>springSecurityFilterChain</filter-name>
+<filter-class>
+org.springframework.web.filter.DelegatingFilterProxy
+</filter-class>
+</filter>
+```
+
+#####9.1.3 examples
+```java
+package spitter.config;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.
+configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.
+configuration.WebSecurityConfigurerAdapter;
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+}
+```
+Enable spring secure for Spring MVC
+```java
+package spitter.config;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.
+configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.annotation.web.servlet.
+configuration.EnableWebMvcSecurity;
+@Configuration
+@EnableWebMvcSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+}
+```
+
+Overriding WebSecurityConfigurerAdapter’s configure() methods
+```java
+configure(WebSecurity) //Override to configure Spring Security’s filter chain.
+configure(HttpSecurity) //Override to configure how requests are secured by interceptors.
+configure(AuthenticationManagerBuilder) //Override to configure user-details services
+```
+
+Three configurations need to be specified:
+```
+i Configure a user store
+ii Specify which requests should and should not require authentication, as well as
+what authorities they require
+iii Provide a custom login screen to replace the plain default login screen
+```
+
+#####9.2 User store
+Three types: in memory, relational database, and LDAP
+
+#####9.2.1 Working with an in-memory user store
+```java
+package spitter.config;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.
+authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.
+configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.annotation.web.servlet.
+configuration.EnableWebMvcSecurity;
+@Configuration
+@EnableWebMvcSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+@Override
+protected void configure(AuthenticationManagerBuilder auth)
+throws Exception {
+auth
+.inMemoryAuthentication()
+.withUser("user").password("password").roles("USER").and()
+.withUser("admin").password("password").roles("USER", "ADMIN");
+}
+}
+```
+Although an in-memory user store is very useful for debugging and developer testing
+purposes, it’s probably not the most ideal choice for a production application. For
+production-ready purposes, it’s usually better to maintain user data in a database of
+some sort.
+
+#####9.2.2 Authenticating against database tables
+It’s quite common for user data to be stored in a relational database, accessed via
+JDBC. To configure Spring Security to authenticate against a JDBC-backed user store,
+you can use the jdbcAuthentication() method. The minimal configuration required
+is as follows:
+```java
+@Autowired
+DataSource dataSource;
+@Override
+protected void configure(AuthenticationManagerBuilder auth)
+throws Exception {
+auth
+.jdbcAuthentication()
+.dataSource(dataSource);
+}
+```
+
+WORKING WITH ENCODED PASSWORDS
+```
+To remedy this problem, you need to specify a password encoder by calling the
+passwordEncoder() method:
+@Override
+protected void configure(AuthenticationManagerBuilder auth)
+throws Exception {
+auth
+.jdbcAuthentication()
+.dataSource(dataSource)
+.usersByUsernameQuery(
+"select username, password, true " +
+"from Spitter where username=?")
+.authoritiesByUsernameQuery(
+"select username, 'ROLE_USER' from Spitter where username=?")
+.passwordEncoder(new StandardPasswordEncoder("53cr3t"));
+}
+```
+Use provided encode implementations or implement your own encoding.
+
+No matter which password encoder you use, it’s important to understand that the
+password in the database is never decoded. Instead, the password that the user enters
+at login is encoded using the same algorithm and is then compared with the encoded
+password in the database. That comparison is performed in the PasswordEncoder’s
+matches() method.
+
+
+#####9.2.3 Applying LDAP-backed authentication
+```java
+@Override
+protected void configure(AuthenticationManagerBuilder auth)
+throws Exception {
+auth
+.ldapAuthentication()
+.userSearchFilter("(uid={0})")
+.groupSearchFilter("member={0}");
+}
+```
+The **userSearchFilter()** and **groupSearchFilter()** methods are used to provide a
+filter for the base LDAP queries, which are used to search for users and groups. By
+default, the base queries for both users and groups are empty, indicating that the
+search will be done from the root of the LDAP hierarchy
+
+
+#####9.2.4 Configuring a custom user service
+Suppose that you need to authenticate against users in a non-relational database such
+as Mongo or Neo4j. In that case, you’ll need to implement a custom implementation
+of the UserDetailsService interface.
+The UserDetailsService interface is rather straightforward:
+```java
+public interface UserDetailsService {
+UserDetails loadUserByUsername(String username)
+throws UsernameNotFoundException;
+}
+```
+All you need to do is implement the loadUserByUsername() method to find a user
+given the user’s username. loadUserByUsername() then returns a UserDetails object
+representing the given user. The following listing shows an implementation of
+UserDetailsService that looks up a user from a given implementation of Spitter-
+Repository.
+
+#####9.3 Intercepting requests
+
+
+
+
+
+
+###Chapter 13: Caching
+Caching is a way to store frequently needed information so that it’s readily available
+when needed. Caching is a great way to keep your application code from having to derive, calculate,
+or retrieve the same answers over and over again for the same question.
+
+Although Spring doesn’t implement a cache solution, it offers declarative support for caching
+that integrates with several popular caching implementations.
+
+#####13.1 Enabling cache support
+Spring’s cache abstraction comes in two forms:
+1) Annotation-driven caching
+2) XML-declared caching
+
+```java
+package com.habuma.cachefun;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+@Configuration
+@EnableCaching
+public class CachingConfig {
+@Bean
+public CacheManager cacheManager() {
+return new ConcurrentMapCacheManager();
+}
+}
+```
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans>
+<cache:annotation-driven />
+<bean id="cacheManager" class=
+"org.springframework.cache.concurrent.ConcurrentMapCacheManager" />
+</beans>
+```
+Under the covers, @EnableCaching and <cache:annotation-driven> work the same
+way. They create an aspect with pointcuts that trigger off of Spring’s caching annotations.
+Depending on the annotation used and the state of the cache, that aspect will **fetch**
+a value from the cache, **add** a value to the cache, or **remove** a value from the cache.
+
+Cache managers are the heart of Spring’s cache abstraction, enabling integration with one of several
+popular caching implementations.
+
+#####13.1.1 Configuring a cache manager
+```
+Spring 3.1 comes with five cache-manager implementations:
+1) SimpleCacheManager
+2) NoOpCacheManager
+3) ConcurrentMapCacheManager
+4) CompositeCacheManager
+5) EhCacheCacheManager
+Outside of the core Spring Framework, Spring Data offers two more cache managers:
+6) RedisCacheManager (from Spring Data Redis)
+7) GemfireCacheManager (from Spring Data GemFire)
+```
+
+**5) EhCacheCacheManager**
+```java
+@Configuration
+@EnableCaching
+public class CachingConfig {
+@Bean
+public EhCacheCacheManager cacheManager(CacheManager cm) {
+return new EhCacheCacheManager(cm);
+}
+@Bean
+public EhCacheManagerFactoryBean ehcache() {
+EhCacheManagerFactoryBean ehCacheFactoryBean =
+new EhCacheManagerFactoryBean();
+ehCacheFactoryBean.setConfigLocation(
+new ClassPathResource("com/habuma/spittr/cache/ehcache.xml"));
+return ehCacheFactoryBean;
+}
+```
+configuration
+```xml
+<ehcache>
+<cache name="spittleCache"
+maxBytesLocalHeap="50m"
+timeToLiveSeconds="100">
+</cache>
+</ehcache>
+```
+
+**6) RedisCacheManager ** (Redis  REmote DIctionary Server)
+```java
+@Configuration
+@EnableCaching
+public class CachingConfig {
+@Bean
+public CacheManager cacheManager(RedisTemplate redisTemplate) {
+return new RedisCacheManager(redisTemplate);
+}
+@Bean
+public JedisConnectionFactory redisConnectionFactory() {
+JedisConnectionFactory jedisConnectionFactory =
+new JedisConnectionFactory();
+jedisConnectionFactory.afterPropertiesSet();
+return jedisConnectionFactory;
+}
+@Bean
+public RedisTemplate<String, String> redisTemplate(
+RedisConnectionFactory redisCF) {
+RedisTemplate<String, String> redisTemplate =
+new RedisTemplate<String, String>();
+redisTemplate.setConnectionFactory(redisCF);
+redisTemplate.afterPropertiesSet();
+return redisTemplate;
+}
+}
+```
+
+**WORKING WITH MULTIPLE CACHE MANAGERS: CompositeCacheManager**
+
+CompositeCacheManager is configured with one or more cache managers and iterates
+over them all as it tries to find a previously cached value. The following listing
+shows how to create a CompositeCacheManager bean that iterates over a JCacheCache-
+Manager, an EhCacheCacheManager, and a RedisCacheManager.
+```java
+@Bean
+public CacheManager cacheManager(
+net.sf.ehcache.CacheManager cm,
+javax.cache.CacheManager jcm) {
+CompositeCacheManager cacheManager = new CompositeCacheManager();
+List<CacheManager> managers = new ArrayList<CacheManager>();
+managers.add(new JCacheCacheManager(jcm));
+managers.add(new EhCacheCacheManager(cm))
+managers.add(new RedisCacheManager(redisTemplate()));
+cacheManager.setCacheManagers(managers);
+return cacheManager;
+}
+```
+
+#####13.2 Annotating methods for caching
+When you enable caching in Spring, an aspect is created that triggers off one or more
+of Spring’s caching annotations.
+
+Spring provides **four annotations** for declaring caching rules. All annotations can be placed either
+on a method or on a class.
+```
+@Cacheable (findOrAdd, only for non-void method):  Indicates that Spring should look in a cache for the method’s return value
+             before invoking the method. If the value is found, the cached value is returned.
+             If not, then the method is invoked and the return value is put in the cache.
+@CachePut (add, only for non-void method):   Indicates that Spring should put the method’s return value in a cache. The
+             cache isn’t checked prior to method invocation, and the method is always
+             invoked.
+@CacheEvict (remove, both void and non-void methods ): Indicates that Spring should evict one or more entries from a cache.
+@Caching (addAll):    A grouping annotation for applying multiples of the other caching annotations at once.
+```
+
+#####13.2.1 Populating the cache
+@Cacheable and @CachePut share a common set of attributes.
+```
+Attribute:  Type:  Description
+1) value: String[]:  The name(s) of the cache(s) to use
+2) condition:  String:  A SpEL expression that, if it evaluates to false, results in caching not being applied to the method call
+3) key:  String: A SpEL expression to calculate a custom cache key
+4) unless: String: A SpEL expression that, if it evaluates to true, prevents the return value from being put in the cache
+```
+Example: When findOne() is called, the caching aspect intercepts the call and looks for a previously
+         returned value in the cache named spittleCache. The cache key is the id
+         parameter passed to the findOne() method. If a value is found for that key, the found
+         value will be returned and the method won’t be invoked. On the other hand, if no
+         value is found, then the method will be invoked and the returned value will be put in
+         the cache, ready for the next time findOne() is called.
+```java
+@Cacheable("spittleCache")
+public Spittle findOne(long id) {
+try {
+return jdbcTemplate.queryForObject(
+SELECT_SPITTLE_BY_ID,
+new SpittleRowMapper(),
+id);
+} catch (EmptyResultDataAccessException e) {
+return null;
+}
+}
+```
+
+Commonly use:
+When you annotate the interface method, the @Cacheable annotation will be inherited
+by all implementations of SpittleRepository, and the same caching rules will be
+applied.
+
+**PUTTING VALUES IN THE CACHE**
+```
+An @CachePut-annotated method is always invoked and its return value is placed in the cache.
+This offers a handy way to preload a cache before anyone comes asking.
+```
+```java
+@CachePut("spittleCache")
+Spittle save(Spittle spittle);
+```
+Default key:is based on the parameters to the method.
+In above case, spittle object is not suit for a key.
+
+**So how you can customize the cache key**
+```java
+@CachePut(value="spittleCache", key="#result.id")
+Spittle save(Spittle spittle);
+```
+```
+Spring offers several SpEL extensions specifically for defining cache rules:
+#root.args:  The arguments passed in to the cached method, as an array
+#root.caches:  The caches this method is executed against, as an array
+#root.target:  The target object
+#root.targetClass:  The target object’s class; a shortcut for #root.target.class
+#root.method: The cached method
+#root.methodName:  The cached method’s name; a shortcut for #root.method.name
+#result: The return value from the method call (not available with @Cacheable)
+#Argument: The name of any method argument (such as #argName) or argument index (such as #a0 or #p0)
+```
+
+**CONDITIONAL CACHING**
+@Cacheable and @CachePut offer two attributes for conditional caching: unless and condition.
+
+Both are given a SpEL expression. If the unless attribute’s SpEL expression evaluates to true,
+then the data returned from the cached method isn’t placed in the cache.
+
+Similarly, if the condition attribute’s SpEL expression evaluates to false, then caching is
+effectively disabled for the method.
+
+```java
+@Cacheable(value="spittleCache"
+unless="#result.message.contains('NoCache')")
+Spittle findOne(long id);
+
+@Cacheable(value="spittleCache"
+unless="#result.message.contains('NoCache')"
+condition="#id >= 10")
+Spittle findOne(long id);
+```
+
+#####13.2.2 Removing cache entries
+```
+If an @CacheEvict annotated method is called, one or more entries are removed from the cache.
+
+Applications: Any time a cached value is no longer valid, you should make sure it’s removed from
+the cache so that future cache hits won’t return stale or otherwise nonexistent data.
+```
+```java
+@CacheEvict("spittleCache")
+void remove(long spittleId);
+```
+NOTE Unlike @Cacheable and @CachePut, @CacheEvict can be used on void
+methods. @Cacheable and @CachePut require a non-void return value, which
+is the item to place in the cache. But because @CacheEvict is only removing
+items from the cache, it can be placed on any method, even a void one.
+
+```
+The @CacheEvict annotation’s attributes specify which cache entries should be removed.
+
+1)value: String[]: The name(s) of the cache(s) to use.
+2) key:  String:  A SpEL expression to calculate a custom cache key.
+3) condition: String: A SpEL expression that, if it evaluates to false, results in caching not being applied to the method call.
+4) allEntries :boolean: If true, all entries in the specified cache(s) should be removed.
+5) beforeInvocation: boolean:  If true, the entries are removed from the cache before the method is invoked. If false (the default), the
+                               entries are removed after a successful method invocation.
+```
+
+
+#####13.3 Declaring caching in XML
+Why use xml configuration:
+```
+1) You don’t feel comfortable putting Spring-specific annotations in your source code.
+2) You want to apply caching to beans for which you don’t own the source code.
+```
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns:cache="http://www.springframework.org/schema/cache"
+xmlns:aop="http://www.springframework.org/schema/aop"
+xsi:schemaLocation="http://www.springframework.org/schema/aop
+http://www.springframework.org/schema/aop/spring-aop.xsd
+http://www.springframework.org/schema/beans
+http://www.springframework.org/schema/beans/spring-beans.xsd
+http://www.springframework.org/schema/cache
+http://www.springframework.org/schema/cache/spring-cache.xsd">
+<aop:config>
+<aop:advisor advice-ref="cacheAdvice"
+pointcut=
+"execution(* com.habuma.spittr.db.SpittleRepository.*(..))"/>
+</aop:config>
+<cache:advice id="cacheAdvice">
+<cache:caching>
+<cache:cacheable
+cache="spittleCache"
+method="findRecent" />
+<cache:cacheable
+cache="spittleCache" method="findOne" />
+<cache:cacheable
+cache="spittleCache"
+method="findBySpitterId" />
+<cache:cache-put
+cache="spittleCache"
+method="save"
+key="#result.id" />
+<cache:cache-evict
+cache="spittleCache"
+method="remove" />
+</cache:caching>
+</cache:advice>
+<bean id="cacheManager" class=
+"org.springframework.cache.concurrent.ConcurrentMapCacheManager"
+/>
+</beans>
+
+```
+
+
+###Chapter 14: Securing methods
+By securing both the web layer of your application and the methods behind the
+scenes, you can be sure that no logic will be executed unless the user is authorized.
+
+In doing so, we’ll declare security rules that prevent a method from being executed
+unless the user for whom it is being executed has the authority to execute it.
+
+Spring Security provides three different kinds of security annotations:
+```
+1) Spring Security’s own @Secured
+2) JSR-250’s @RolesAllowed
+3) Expression-driven annotations, with @PreAuthorize, @PostAuthorize, @PreFilter, and @PostFilter
+```
+The @Secured and @RolesAllowed annotations are the simplest options, restricting
+access based on what authorities have been granted to the user.
+
+#####14.1.1 Restricting method access with @Secured
+```java
+@Configuration
+@EnableGlobalMethodSecurity(securedEnabled=true)
+public class MethodSecurityConfig
+extends GlobalMethodSecurityConfiguration {
+}
+```
+One drawback of the @Secured annotation is that it’s a Spring-specific annotation.
+If you’re more comfortable using annotations defined in Java standards, then perhaps
+you should consider using @RolesAllowed instead.
+
+#####14.1.2 Using JSR-250’s @RolesAllowed with Spring Security
+@EnableGlobalMethodSecurity’s jsr250Enabled attribute to true:
+@Configuration
+@EnableGlobalMethodSecurity(jsr250Enabled=true)
+public class MethodSecurityConfig
+extends GlobalMethodSecurityConfiguration {
+}
+
+
+#####14.2 Using expressions for method-level security
+Spring Security 3.0 offers four new annotations that can be used to secure methods with
+SpEL expressions.
+```
+Annotations Description
+@PreAuthorize:  Restricts access to a method before invocation based on the result of evaluating an expression
+@PostAuthorize: Allows a method to be invoked, but throws a security exception if the expression evaluates to false
+@PostFilter: Allows a method to be invoked, but filters the results of that method based on an expression
+@PreFilter:  Allows a method to be invoked, but filters input prior to entering the method
+```
+```java
+@PreAuthorize("hasRole('ROLE_SPITTER')")
+public void addSpittle(Spittle spittle) {
+// ...
+}
+
+@PreAuthorize(
+"(hasRole('ROLE_SPITTER') and #spittle.text.length() <= 140)"
++"or hasRole('ROLE_PREMIUM')")
+public void addSpittle(Spittle spittle) {
+// ...
+}
+
+@PostAuthorize("returnObject.spitter.username == principal.username")
+public Spittle getSpittleById(long id) {
+// ...
+}
+
+@PreAuthorize("hasAnyRole({'ROLE_SPITTER', 'ROLE_ADMIN'})")
+@PostFilter( "hasRole('ROLE_ADMIN') || "
++ "filterObject.spitter.username == principal.name")
+public List<Spittle> getOffensiveSpittles() {
+...
+}
+
+
+@PreAuthorize("hasAnyRole({'ROLE_SPITTER', 'ROLE_ADMIN'})")
+@PreFilter( "hasRole('ROLE_ADMIN') || "
++ "targetObject.spitter.username == principal.name")
+public void deleteSpittles(List<Spittle> spittles) { ... }
+```
+
+```java
+package spittr.security;
+import java.io.Serializable;
+import org.springframework.security.access.PermissionEvaluator;
+import org.springframework.security.core.Authentication;
+import spittr.Spittle;
+public class SpittlePermissionEvaluator implements PermissionEvaluator {
+private static final GrantedAuthority ADMIN_AUTHORITY =
+new GrantedAuthorityImpl("ROLE_ADMIN");
+public boolean hasPermission(Authentication authentication,
+Object target, Object permission) {
+if (target instanceof Spittle) {
+Spittle spittle = (Spittle) target;
+String username = spittle.getSpitter().getUsername();
+if ("delete".equals(permission)) {
+return isAdmin(authentication) ||
+username.equals(authentication.getName());
+}
+}
+throw new UnsupportedOperationException(
+"hasPermission not supported for object <" + target
++ "> and permission <" + permission + ">");
+}
+public boolean hasPermission(Authentication authentication,
+Serializable targetId, String targetType, Object permission) {
+throw new UnsupportedOperationException();
+}
+private boolean isAdmin(Authentication authentication) {
+return authentication.getAuthorities().contains(ADMIN_AUTHORITY);
+}
+}
+```
+In this chapter, we looked at six annotations that can be placed on methods to
+declare security constraints. For simple, authorities-oriented security, Spring Security’s
+@Secured annotation or the standards-based @RolesAllowed come in handy. When
+the security rules get more interesting, @PreAuthorize and @PostAuthorize and
+SpEL provide more power. You also saw how to filter a method’s inputs and outputs
+using SpEL expressions given to @PreFilter and @PostFilter.
+Finally, we looked at how you can make your security rules easier to maintain, test,
+and debug by defining a custom expression evaluator that works behind the scenes of
+the hasPermission() function in SpEL.
+
+##Part 4: Integrating Spring
+In chapter 15, “Working with remote services,” you’ll learn how to expose
+your application objects as remote services. You’ll learn how to transparently
+access remote services as though they’re any other object in your application. In
+doing so, you’ll explore various remoting technologies, including RMI, Hessian/
+Burlap, and SOAP web services with JAX-WS.
+
+In contrast to RPC-style remote services presented in chapter 15, chapter 16,
+"Creating Rest APIs with Spring MVC," explores how to build RESTful services
+that are focused on application resources using Spring MVC.
+
+Chapter 17, “Messaging with Spring,” explores a different approach to application
+integration by showing how Spring can be used with the Java Message Service
+(JMS) and the Advanced Message Queuing Protocol (AMQP) to achieve
+asynchronous communication between applications.
+
+Increasingly, web applications are expected to be responsive and show near
+real-time data. Chapter 18, “Messaging with WebSocket and STOMP,” showcases
+Spring’s new support for building asynchronous communication between a
+server and its web clients.
+
+Another form of asynchronous communication isn’t necessarily application to
+application. Chapter 19, “Sending email with Spring,” shows how to send
+asynchronous messages to people in the form of email using Spring.
+
+Management and monitoring of Spring beans is the subject of chapter 20, “Managing
+Spring beans with JMX.” In this chapter, you’ll learn how Spring can automatically
+expose beans configured in Spring as JMX MBeans.
+
+Chapter 21, “Simplifying Spring development with Spring Boot,” presents an exciting
+new game-changing development in Spring. You’ll see how Spring Boot takes away the
+chore of writing much of the boilerplate configuration that is typical in Spring applications
+and leaves you to focus on implementing business functionality.
+
+###Chapter 15: Working with remote services
+Several remoting technologies are available to you as a Java developer, including these:
+```
+1) Remote Method Invocation (RMI)
+2) Caucho’s Hessian and Burlap
+3) Spring’s own HTTP-based remoting
+4) Web services with JAX-RPC and JAX-WS
+```
+#####15.1 An overview of Spring remoting
+Remoting is a conversation between a client application and a service.
+
+The conversation between the other applications and Spittr begins with a remote
+procedure call (RPC) from the client applications. On the surface, an RPC is similar to a
+call to a method on a local object. Both are **synchronous operations**, **blocking execution**
+in the calling code until the called procedure is complete.
+
+Spring supports RPC via several remoting technologies.
+```
+1) Remote Method Invocation (RMI): Accessing/exposing Java-based services when network constraints
+                                such as firewalls aren’t a factor.
+2) Hessian or Burlap: Accessing/exposing Java-based services over HTTP when network constraints
+                   are a factor. Hessian is a binary protocol, whereas Burlap is XML-based.
+3) HTTP invoker:  Accessing/exposing Spring-based services when network constraints
+                  are a factor and you desire Java serialization over XML or proprietary serialization.
+4) JAX-RPC and JAX-WS:  Accessing/exposing platform-neutral, SOAP-based web services.
+```
+
+In all models, services can be configured into your application as Spring-managed
+beans. This is accomplished using a proxy factory bean that enables you to wire
+remote services into properties of your other beans as if they were local objects.
+
+The client makes calls to the proxy as if the proxy were providing the service functionality.
+The proxy communicates with the remote service on behalf of the client. It handles
+the details of connecting and making remote calls to the remote service.
+
+
+###Chapter 16: Creating REST APIs with Spring MVC
+Representational State Transfer (REST) has emerged as a popular information-centric alternative to traditional
+SOAP-based web services. Whereas SOAP typically focused on actions and processing, REST’s concern is with the
+data being handled.
+
+
+#####16.1 Getting REST
+To understand what REST is all about, it helps to break down the acronym into its constituent parts:
+
+```
+1) Representational—REST resources can be represented in virtually any form,
+including XML, JavaScript Object Notation (JSON), or even HTML—whatever
+form best suits the consumer of those resources.
+2) State—When working with REST, you’re more concerned with the state of a resource than with the actions you
+can take against resources.
+3) Transfer—REST involves transferring resource data, in some representational form, from one application to another.
+```
+REST is about transferring the state of resources—in a representational
+form that is most appropriate for the client or server—from a server to a client
+(or vice versa)
+
+These HTTP methods are often mapped to CRUD verbs as follows:
+```
+1) Create—POST
+2) Read—GET
+3) Update—PUT or PATCH
+4) Delete—DELETE
+```
+Even though this is the common mapping of HTTP methods to CRUD verbs, it’s not a
+strict requirement. There are cases where PUT can be used to create a new resource
+and POST can be used to update a resource. In fact, the non-idempotent nature of
+POST makes it a rogue method, capable of performing operations that don’t easily fit
+the semantics of the other HTTP methods.
+
+**How Spring supports REST**
+Spring supports the creation of REST resources in the following ways:
+```
+1) Controllers can handle requests for all HTTP methods, including the four primary
+   REST methods: GET, PUT, DELETE, and POST. Spring 3.2 and higher also supports
+   the PATCH method.
+2) The @PathVariable annotation enables controllers to handle requests for
+   parameterized URLs (URLs that have variable input as part of their path).
+3) Resources can be represented in a variety of ways using Spring views and view
+   resolvers, including View implementations for rendering model data as XML,
+   JSON, Atom, and RSS.
+4) The representation best suited for the client can be chosen using ContentNegotiatingViewResolver.
+   View-based rendering can be bypassed altogether using the @ResponseBody
+   annotation and various HttpMethodConverter implementations.
+5) Similarly, the @RequestBody annotation, along with HttpMethodConverter
+   implementations, can convert inbound HTTP data into Java objects passed in to a controller’s handler methods.
+6) Spring applications can consume REST resources using RestTemplate.
+```
+Throughout this chapter, we’ll explore these features that make Spring more RESTful
+starting with how to produce REST resources using Spring MVC. Then in section 16.4,
+we’ll switch to the client side of REST and see how to consume these resources.
+
+
+#####16.2 Creating your first REST endpoint
+Recommend that you at minimum support JSON. JSON is a clear winner because essentially no marshaling/demarshaling is
+required to use JSON data in JavaScript.
+
+Spring offers two options to transform a resource’s Java representation into the
+representation that’s shipped to the client:
+```
+1) Content negotiation—A view is selected that can render the model into a representation
+to be served to the client.
+2) Message conversion—A message converter transforms an object returned from
+the controller into a representation to be served to the client.
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
