@@ -2234,7 +2234,7 @@ Using RMI, Hessian, Burlap, the HTTP invoker, and web services to enable synchro
 application directly contacts a remote service and waits for the remote procedure to complete before continuing.
 
 Asynchronous messaging is a way of indirectly sending messages from one application to another without waiting for a
-response. Asynchronous messaging has several advantages over synchronous messaging:
+response. Asynchronous messaging (one way communication)  VS synchronous messaging (two way communication):
 ```
 1) Synchronous communication implies waiting
 2) The client is coupled to the service through the service’s interface
@@ -2270,6 +2270,11 @@ become unavailable, the client wouldn’t be able to proceed.
 But when sending messages asynchronously, the client can rest assured that its
 messages will be delivered. Even if the service is unavailable when a message is sent,
 the message will be stored until the service is available again.
+```
+Challenges:
+```
+1. What if delivery failed
+2. What if queues reach the max number
 ```
 
 
@@ -2319,6 +2324,106 @@ the publisher has no idea how the message will be processed.
 ```
 
 #####17.2 Sending messages with JMS
+Using JmsTemplate, it’s easy to send messages across queues and topics from the producer
+side and also to receive those messages on the consumer side.
+
+Spring also supports the notion of message-driven POJOs: simple Java objects that react to messages
+arriving on a queue or topic in an asynchronous fashion.
+
+#####17.2.1 Setting up a message broker in Spring
+**CREATING A CONNECTION FACTORY**
+```xml
+<bean id="connectionFactory"
+class="org.apache.activemq.spring.ActiveMQConnectionFactory"
+p:brokerURL="tcp://localhost:61616"/>
+```
+
+**DECLARING AN ACTIVEMQ MESSAGE DESTINATION**
+```xml
+<bean id="queue"
+class="org.apache.activemq.command.ActiveMQQueue"
+c:_="spitter.queue" />
+
+Similarly, the following <bean> declares a topic for ActiveMQ:
+
+<bean id="topic"
+class="org.apache.activemq.command.ActiveMQTopic"
+c:_="spitter.queue" />
+
+```
+
+#####17.2.2 Using Spring’s JMS template
+NON-Spring: Sending a message using conventional JMS
+```java
+ConnectionFactory cf =
+new ActiveMQConnectionFactory("tcp://localhost:61616");
+Connection conn = null;
+Session session = null;
+try {
+conn = cf.createConnection();
+session = conn.createSession(false, Session.AUTO_ACKNOWLEDGE);
+Destination destination = new ActiveMQQueue("spitter.queue");
+MessageProducer producer = session.createProducer(destination);
+TextMessage message = session.createTextMessage();
+message.setText("Hello world!");
+producer.send(message);
+} catch (JMSException e) {
+// handle exception?
+} finally {
+try {
+if (session != null) {
+session.close();
+}
+if (conn != null) {
+conn.close();
+}
+} catch (JMSException ex) {
+}
+}
+```
+**WORKING WITH JMS TEMPLATES**
+```
+JmsTemplate takes care of creating a connection, obtaining a session, and ultimately sending or receiving messages.
+```
+Spring’s JmsTemplate catches standard JMSExceptions and rethrows them as
+unchecked subclasses of Spring’s own JmsException.
+```
+DestinationResolutionException:  Spring-specific—thrown when Spring can’t resolve a destination name
+
+IllegalStateException:  IllegalStateException
+
+InvalidClientIDException InvalidClientIDException
+
+InvalidDestinationException InvalidDestinationException
+
+InvalidSelectorException InvalidSelectorException
+
+JmsSecurityException JmsSecurityException
+
+ListenerExecutionFailedException Spring-specific—thrown when execution of a listener method fails
+
+MessageConversionException Spring-specific—thrown when message conversion fails
+
+MessageEOFException MessageEOFException
+
+MessageFormatException MessageFormatException
+
+MessageNotReadableException MessageNotReadableException
+
+MessageNotWriteableException MessageNotWriteableException
+
+ResourceAllocationException ResourceAllocationException
+
+SynchedLocalTransactionFailedException Spring-specific—thrown when a synchronized local transaction fails to complete
+
+TransactionInProgressException TransactionInProgressException
+
+TransactionRolledBackException TransactionRolledBackException
+
+UncategorizedJmsException Spring-specific—thrown when no other exception applies
+```
+
+**SENDING MESSAGES**
 
 
 
