@@ -2424,24 +2424,578 @@ UncategorizedJmsException Spring-specific—thrown when no other exception appli
 ```
 
 **SENDING MESSAGES**
+```java
+public interface AlertService {
+void sendSpittleAlert(Spittle spittle);
+}
+
+public class AlertServiceImpl implements AlertService {
+private JmsOperations jmsOperations;
+@Autowired
+public AlertServiceImpl(JmsOperations jmsOperatons) {
+this.jmsOperations = jmsOperations;
+}
+public void sendSpittleAlert(final Spittle spittle) {
+jmsOperations.send(
+"spittle.alert.queue",
+new MessageCreator() {
+public Message createMessage(Session session)
+throws JMSException {
+return session.createObjectMessage(spittle);
+}
+}
+);
+}
+}
+}
+```
+
+**SETTING A DEFAULT DESTINATION**
+```
+Instead of explicitly specifying a destination each time you send a message, you can
+opt for wiring a default destination into JmsTemplate:
+<bean id="jmsTemplate"
+class="org.springframework.jms.core.JmsTemplate"
+c:_-ref="connectionFactory"
+p:defaultDestinationName="spittle.alert.queue" />
+```
+
+
+**CONVERTING MESSAGES WHEN SENDING**
+convertAndSend() method doesn’t take a MessageCreator as an argument.
+That’s because convertAndSend() uses a built-in message converter to create
+the message for you.
+```java
+public void sendSpittleAlert(Spittle spittle) {
+jmsOperations.convertAndSend(spittle);
+}
+
+public interface MessageConverter {
+Message toMessage(Object object, Session session)
+throws JMSException, MessageConversionException;
+Object fromMessage(Message message)
+throws JMSException, MessageConversionException;
+}
+```
+Spring offers several message converters for common conversion tasks. (All of these
+message converters are in the org.springframework.jms.support.converter package.)
+```
+1) MappingJacksonMessageConverter Uses the Jackson JSON library to convert messages to and from JSON
+
+2) MappingJackson2MessageConverter Uses the Jackson 2 JSON library to convert messages to and from JSON
+
+3) MarshallingMessageConverter Uses JAXB to convert messages to and from XML
+
+4) SimpleMessageConverter Converts Strings to/from TextMessage, byte arrays to/ from BytesMessage, Maps to/from MapMessage,
+   and Serializable objects to/from ObjectMessage
+```
+
+```xml
+<bean id="messageConverter"
+class="org.springframework.jms.support.converter.MappingJacksonMessageConverter" />
+
+Then you can wire it into JmsTemplate like this:
+
+<bean id="jmsTemplate"
+class="org.springframework.jms.core.JmsTemplate"
+c:_-ref="connectionFactory"
+p:defaultDestinationName="spittle.alert.queue"
+p:messageConverter-ref="messageConverter" />
+
+```
+
+**CONSUMING MESSAGES**
+```java
+public Spittle receiveSpittleAlert() {
+try {
+ObjectMessage receivedMessage =
+(ObjectMessage) jmsOperations.receive();
+return (Spittle) receivedMessage.getObject();
+} catch (JMSException jmsException) {
+throw JmsUtils.convertJmsAccessException(jmsException);
+}
+}
+```
+The big downside of consuming messages with JmsTemplate is that both the
+receive() and receiveAndConvert() methods are synchronous.
+
+This means the receiver must wait patiently for the message to arrive, because those methods will
+block until a message is available (or until a timeout condition occurs).
+
+Doesn’t it seem odd to synchronously consume a message that was asynchronously sent?
+That’s where message-driven POJOs come in handy. Let’s see how to receive messages asynchronously using components that
+react to messages rather than wait on them.
+
+#####17.2.3 Creating message-driven POJOs
+message driven bean (MDB) are EJBs that process messages asynchronously.
+
+**CREATING A MESSAGE LISTENER**
+```java
+@MessageDriven(mappedName="jms/spittle.alert.queue")
+public class SpittleAlertHandler implements MessageListener {
+@Resource
+private MessageDrivenContext mdc;
+public void onMessage(Message message) {
+...
+}
+}
+```
+
+Spring MDP that asynchronously receives and processes messages:
+```
+public class SpittleAlertHandler {
+public void handleSpittleAlert(Spittle spittle) {
+// ... implementation goes here...
+}
+}
+```
+
+
+**CONFIGURING MESSAGE LISTENERS**
+The trick to empowering a POJO with message-receiving abilities is to configure it as a
+message listener in Spring. Spring’s jms namespace provides everything you need to
+do that. First, you must declare the handler as a <bean>:
+```xml
+<bean id="spittleHandler"
+class="com.habuma.spittr.alerts.SpittleAlertHandler" />
+```
+Then, to turn SpittleAlertHandler into a message-driven POJO, you can declare the
+bean to be a message listener:
+```xml
+<jms:listener-container connection-factory="connectionFactory">
+<jms:listener destination="spitter.alert.queue"
+ref="spittleHandler" method="handleSpittleAlert" />
+</jms:listener-container>
+```
+The <jms:listener> element is used to identify a bean and a method that should
+handle incoming messages. For the purposes of handling spittle alert messages, the
+ref element refers to your spittleHandler bean. When a message arrives on spitter.alert.queue
+(as designated by the destination attribute), the spittleHandler bean’s handleSpittleAlert()
+method gets the call (per the method attribute).
+
+
+#####17.2.4 Using message-based RPC
+**EXPORTING JMS-BASED SERVICES**
+```java
+@Component("alertService")
+public class AlertServiceImpl implements AlertService {
+private JavaMailSender mailSender;
+private String alertEmailAddress;
+public AlertServiceImpl(JavaMailSender mailSender,
+String alertEmailAddress) {
+this.mailSender = mailSender;
+this.alertEmailAddress = alertEmailAddress;
+}
+public void sendSpittleAlert(final Spittle spittle) {
+SimpleMailMessage message = new SimpleMailMessage();
+String spitterName = spittle.getSpitter().getFullName();
+message.setFrom("noreply@spitter.com");
+message.setTo(alertEmailAddress);
+message.setSubject("New spittle from " + spitterName);
+message.setText(spitterName + " says: " + spittle.getText());
+mailSender.send(message);
+}
+}
+```
+
+**CONSUMING JMS-BASED SERVICES**
+To consume the alert service, you can wire the JmsInvokerProxyFactoryBean like this:
+```xml
+<bean id="alertService"
+class="org.springframework.jms.remoting.JmsInvokerProxyFactoryBean"
+p:connectionFactory-ref="connectionFactory"
+p:queueName="spittle.alert.queue"
+propp:serviceInterface="com.habuma.spittr.alerts.AlertService" />
+```
+
+
+#####17.3 Messaging with AMQP
+AMQP offers several advantages over JMS:
+
+First, AMQP defines a wire-level protocol for messaging, whereas JMS defines an API specification. JMS’s API
+specification ensures that all JMS implementations can be used through a common
+API but doesn’t mandate that messages sent by one JMS implementation can be consumed
+by a different JMS implementation. AMQP’s wire-level protocol, on the other
+hand, specifies the format that messages will take when en route between the producer
+and consumer. Consequently, AMQP is more interoperable than JMS—not only
+across different AMQP implementations, but also across languages and platforms.
+
+Another significant advantage of AMQP over JMS is that AMQP has a much more
+flexible and transparent messaging model. With JMS, there are only two messaging
+models to choose from: point-to-point and publish/subscribe. Both of those models
+are certainly possible with AMQP, but AMQP enables you to route messages in a number
+of ways, and it does this by decoupling the message producer from the queue(s) in
+which the messages will be placed.
+
+
+
+The four standard types of AMQP exchanges are as follows:
+1) Direct—A message will be routed to a queue if its routing key is a direct match
+for the routing key of the binding.
+2 Topic—A message will be routed to a queue if its routing key is a wildcard match
+for the routing key of the binding.
+3) Headers—A message will be routed to a queue if the headers and values in its
+table of arguments match those in the binding’s table of arguments. A special
+header named x-match can specify whether all values must match or if any can
+match.
+4) Fanout—A message will be routed to all queues that are bound to the exchange,
+regardless of the routing key or headers/values in the table of arguments.
+
+Put simply, producers publish to an exchange with a routing key; consumers
+retrieve from a queue.
+
+
+#####17.3.2 Configuring Spring for AMQP messaging
+```xml
+<connection-factory id="connectionFactory"
+host="${rabbitmq.host}"
+port="${rabbitmq.port}"
+username="${rabbitmq.username}"
+password="${rabbitmq.password}" />
+```
+
+
+**DECLARING QUEUES, EXCHANGES, AND BINDINGS**
+Spring AMQP’s rabbit namespace includes several elements for lazily creating queues,
+exchanges, and the bindings between them.
+```
+<queue> Creates a queue.
+<fanout-exchange> Creates a fanout exchange.
+<header-exchange> Creates a headers exchange.
+<topic-exchange> Creates a topic exchange.
+<direct-exchange> Creates a direct exchange.
+<bindings> <binding/> </bindings> The <bindings> element defines a set of one or
+                                  more <binding> elements. The <binding> element
+                                  creates a binding between an exchange and a queue.
+```
+
+```xml
+<admin connection-factory="connectionFactory"/
+> <queue id="spittleAlertQueue" name="spittle.alerts" />
+```
+Configure a fanout exchange and several queues like this:
+```
+<admin connection-factory="connectionFactory" /
+> <queue name="spittle.alert.queue.1" > <queue name="spittle.alert.queue
+.2" > <queue name="spittle.alert.queue.3" > <fanoutexchange
+name="spittle.fanout"> <bindings> <binding queue="spittle.al
+ert.queue.1" /> <binding queue="spittle.alert.queue.2" /
+> <binding queue="spittle.alert.queue.3" /> </bindings> </fanoutexchange>
+```
+
+#####17.3.3 Sending messages with RabbitTemplate
+```xml
+<template id="rabbitTemplate" connection-factory="connectionFactory" />
+```
+```java
+public class AlertServiceImpl implements AlertService {
+private RabbitTemplate rabbit;
+@Autowired
+public AlertServiceImpl(RabbitTemplate rabbit) {
+this.rabbit = rabbit;
+}
+public void sendSpittleAlert(Spittle spittle) {
+rabbit.convertAndSend("spittle.alert.exchange",
+"spittle.alerts",
+spittle);
+}
+}
+```
+
+#####17.3.4 Receiving AMQP messages
+**RECEIVING MESSAGES WITH RABBITTEMPLATE**
+```xml
+<template id="rabbitTemplate"
+connection-factory="connectionFactory"
+exchange="spittle.alert.exchange"
+routing-key="spittle.alerts"
+queue="spittle.alert.queue" />
+```
+```java
+Message message = rabbit.receive();
+```
+
+**DEFINING MESSAGE-DRIVEN AMQP POJOS**
+
+Notice that this is exactly the same SpittleAlertHandler that you used when consuming
+Spittle messages using JMS
+```java
+public class SpittleAlertHandler {
+public void handleSpittleAlert(Spittle spittle) {
+// ... implementation goes here ...
+}
+}
+```
+
+```xml
+<bean id="spittleListener" class="com.habuma.spittr.alert.SpittleAlertHandler" />
+```
+```xml
+<listener-container connection-factory="connectionFactory">
+<listener ref="spittleListener"
+method="handleSpittleAlert"
+queue-names="spittle.alert.queue" />
+</listener-container>
+```
+Note: the only difference is destination attribute for JMS, queue-names for AMQP
+
+#####17.4 Summary
+Spring’s JMS template eliminates the boilerplate that’s commonly required by the traditional
+JMS programming model.
+
+Spring-enabled message-driven beans make it possible to declare bean methods that react to messages that
+arrive in a queue or topic.
+
+
+###Chapter 20: Managing Spring beans with JMX (Java Management Extensions)
+Spring’s support for DI is a great way to configure bean properties in an application.
+But once the application has been deployed and is running, DI alone can’t do
+much to help you change that configuration.
+
+Java Management Extensions (JMX) can dig into a running application and change its configuration on the fly.
+
+JMX is a technology that enables you to instrument applications for **management**, **monitoring**, and **configuration**.
+
+The key component of an application that’s instrumented for management with
+JMX is the managed bean (MBean). An MBean is a JavaBean that exposes certain
+methods that define the management interface.
+
+The JMX specification defines four types of MBeans:
+```
+1) Standard MBeans:  MBeans whose management interface is determined by
+                  reflection on a fixed Java interface that’s implemented by the bean class.
+
+2) Dynamic MBeans: MBeans whose management interface is determined at runtime
+                   by invoking methods of the DynamicMBean interface. Because the management
+                   interface isn’t defined by a static interface, it can vary at runtime.
+
+3) Open MBeans: A special kind of dynamic MBean whose attributes and operations
+                are limited to primitive types, class wrappers for primitive types, and any
+                type that can be decomposed into primitives or primitive wrappers.
+
+4) Model MBeans: A special kind of dynamic MBean that bridges a management
+                 interface to the managed resource. Model MBeans aren’t written as much as
+                 they are declared. They’re typically produced by a factory that uses some metainformation
+                 to assemble the management interface.
+```
+
+#####20.1: Exporting Spring beans as MBeans
+MBean server (sometimes called an MBean agent) is a container
+where MBeans live and through which the MBeans are accessed.
+
+JMX-based management tool such as JConsole or VisualVM to peer inside a
+running application to view the beans’ properties and invoke their methods
+
+The following @Bean method declares an MBeanExporter in Spring to export the
+spittleController bean as a model MBean:
+```java
+@Bean
+public MBeanExporter mbeanExporter(SpittleController spittleController) {
+MBeanExporter exporter = new MBeanExporter();
+Map<String, Object> beans = new HashMap<String, Object>();
+beans.put("spitter:name=SpittleController", spittleController);
+exporter.setBeans(beans);
+return exporter;
+}
+```
+
+
+#####20.1.1 Exposing methods by name
+To limit your MBean’s exposure,
+you need to tell MethodNameBasedMBeanInfoAssembler to include only those methods
+in the MBean’s interface. The following declaration of a MethodNameBasedMBean-
+InfoAssembler bean singles out those methods:
+```java
+@Bean
+public MethodNameBasedMBeanInfoAssembler assembler() {
+MethodNameBasedMBeanInfoAssembler assembler =
+new MethodNameBasedMBeanInfoAssembler();
+assembler.setManagedMethods(new String[] {
+"getSpittlesPerPage", "setSpittlesPerPage"
+});
+return assembler;
+}
+```
+
+To put the assembler into action, you need to wire it into the MBeanExporter:
+```java
+@Bean
+public MBeanExporter mbeanExporter(
+SpittleController spittleController,
+MBeanInfoAssembler assembler) {
+MBeanExporter exporter = new MBeanExporter();
+Map<String, Object> beans = new HashMap<String, Object>();
+beans.put("spitter:name=SpittleController", spittleController);
+exporter.setBeans(beans);
+exporter.setAssembler(assembler);
+return exporter;
+}
+```
+Method name–based assemblers are straightforward and easy to use, but, in terms of Spring configuration, the method-name
+approach doesn’t scale well when exporting multiple MBeans.
+
+#####20.1.2 Using interfaces to define MBean operations and attributes
+```java
+public interface SpittleControllerManagedOperations {
+int getSpittlesPerPage();
+void setSpittlesPerPage(int spittlesPerPage);
+}
+
+@Bean
+public InterfaceBasedMBeanInfoAssembler assembler() {
+InterfaceBasedMBeanInfoAssembler assembler =
+new InterfaceBasedMBeanInfoAssembler();
+assembler.setManagedInterfaces(
+new Class<?>[] { SpittleControllerManagedOperations.class }
+);
+return assembler;
+}
+```
+The nice thing about using interfaces to select managed operations is that you can
+collect dozens of methods into a few interfaces and keep the configuration of
+InterfaceBasedMBeanInfoAssembler clean.
+
+method names declared in an interface
+or Spring context and method names in the implementation. This duplication exists
+for no other reason than to satisfy the MBeanExporter.
 
 
 
 
+#####20.1.3 Working with annotation-driven MBeans
+MetadataMBeanInfoAssembler can be configured to use annotations
+```xml
+<context:mbean-export server="mbeanServer" />
+```
+
+```java
+@Controller
+@ManagedResource(objectName="spitter:name=SpittleController") //
+public class SpittleController {
+...
+@ManagedAttribute //
+public void setSpittlesPerPage(int spittlesPerPage) {
+this.spittlesPerPage = spittlesPerPage;
+}
+@ManagedAttribute //
+public int getSpittlesPerPage() {
+return spittlesPerPage;
+}
+}
+```
+
+
+#####20.1.4 Handling MBean collisions
+There are three ways to handle an MBean name collision via the registration Policy property:
+```
+1) FAIL_ON_EXISTING—Fail if an existing MBean has the same name (this is the default behavior).
+
+2) IGNORE_EXISTING—Ignore the collision and don’t register the new MBean.
+
+3) REPLACING_EXISTING—Replace the existing MBean with the new MBean.
+```
+
+#####20.2 Remoting MBeans
+#####20.2.1 Exposing remote MBeans
+```java
+@Bean
+public ConnectorServerFactoryBean connectorServerFactoryBean() {
+        ConnectorServerFactoryBean csfb = new ConnectorServerFactoryBean();
+        csfb.setServiceUrl( "service:jmx:rmi://localhost/jndi/rmi://localhost:1099/spitter");
+        return csfb;
+}
+```
+
+#####20.2.2 Accessing remote MBeans
+```java
+@Bean
+public MBeanServerConnectionFactoryBean connectionFactoryBean() {
+MBeanServerConnectionFactoryBean mbscfb =
+new MBeanServerConnectionFactoryBean();
+mbscfb.setServiceUrl(
+"service:jmx:rmi://localhost/jndi/rmi://localhost:1099/spitter");
+return mbscfb;
+}
+```
 
 
 
+#####20.2.3 Proxying MBeans
+```java
+@Bean
+public MBeanProxyFactoryBean remoteSpittleControllerMBean(
+MBeanServerConnection mbeanServerClient) {
+MBeanProxyFactoryBean proxy = new MBeanProxyFactoryBean();
+proxy.setObjectName("");
+proxy.setServer(mbeanServerClient);
+proxy.setProxyInterface(SpittleControllerManagedOperations.class);
+return proxy;
+}
+```
 
 
+#####20.3 Handling notifications
+Spring’s support for sending notifications comes in the form of the Notification-
+PublisherAware interface. Any bean-turned-MBean that wishes to send notifications
+should implement this interface.
 
+```java
+@Component
+@ManagedResource("spitter:name=SpitterNotifier")
+@ManagedNotification(
+notificationTypes="SpittleNotifier.OneMillionSpittles",
+name="TODO")
+public class SpittleNotifierImpl
+implements NotificationPublisherAware, SpittleNotifier {
+private NotificationPublisher notificationPublisher;
+public void setNotificationPublisher(
+NotificationPublisher notificationPublisher) {
+this.notificationPublisher = notificationPublisher;
+}
+public void millionthSpittlePosted() {
+notificationPublisher.sendNotification(
+new Notification(
+"SpittleNotifier.OneMillionSpittles", this, 0));
+}
+}
+```
 
+#####20.3.1 Listening for notifications
+The standard way to receive MBean notifications is to implement the javax
+.management.NotificationListener interface.
+```java
+public class PagingNotificationListener
+implements NotificationListener {
+public void handleNotification(
+Notification notification, Object handback) {
+// ...
+}
+}
+```
+The only thing left to do is register PagingNotificationListener with the MBean Exporter:
+```java
+@Bean
+public MBeanExporter mbeanExporter() {
+MBeanExporter exporter = new MBeanExporter();
+Map<?, NotificationListener> mappings =
+new HashMap<?, NotificationListener>();
+mappings.put("Spitter:name=PagingNotificationListener",
+new PagingNotificationListener());
+exporter.setNotificationListenerMappings(mappings);
+return exporter;
+}
+```
 
+#####20.4 Summary 539
+With JMX, you can open a window into the inner workings of your application.
 
+In this chapter, you saw how to configure Spring to automatically export Spring beans as JMX
+MBeans so that their details can be viewed and manipulated through JMX-ready management
+tools.
 
-
-
-
-
+You also learned how to create and use remote MBeans for times when
+those MBeans and tools are distant from each other. Finally, you saw how to use
+Spring to publish and listen for JMX notifications.
 
 
 
