@@ -11,7 +11,8 @@ needs … well … rounding, then this knight’s going to have to sit it out.
 
 What’s more, it’d be terribly difficult to write a unit test for DamselRescuingKnight.
 
-In such a test, you’d like to be able to assert that the quest’s embark() method is called when the knight’s embarkOnQuest() method is called.
+In such a test, you’d like to be able to assert that the quest’s embark() method is called when the knight’s 
+embarkOnQuest() method is called.
 
 But there’s no clear way to accomplish that here. Unfortunately, DamselRescuingKnight will remain
 untested.
